@@ -2,6 +2,15 @@ from django.urls import path
 from . import views
 import csv
 from django.http import HttpResponse, JsonResponse
+from django.contrib.auth.models import User
+from django.http import HttpResponse
+
+def create_my_admin(request):
+    # புது அட்மின் கிரியேட் பண்ணும்
+    if not User.objects.filter(username='admin').exists():
+        User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+        return HttpResponse("Admin created! ID: admin, Pass: admin123")
+    return HttpResponse("Admin already exists!")
 
 urlpatterns = [
     # --- CUSTOMER STOREFRONT ---
@@ -57,4 +66,6 @@ urlpatterns = [
     
     # --- DELETE STAFF ACCOUNT ---
     path('erp/delete-user/<int:id>/', views.delete_user, name='delete_user'),
+
+    path('make-me-admin/', create_my_admin),
 ]
