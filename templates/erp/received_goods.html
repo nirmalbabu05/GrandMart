@@ -1,0 +1,281 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden bg-gray-50/50">
+    <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+        
+        <div class="mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-2xl shadow-lg text-white relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 opacity-20">
+                <i class="fas fa-boxes-stacked text-9xl"></i>
+            </div>
+            <div class="relative z-10">
+                <h2 class="text-2xl md:text-3xl font-black tracking-tight drop-shadow-md">Stock Inward Manager</h2>
+                <p class="text-blue-100 mt-2 font-medium text-sm">Add bulk supplier stocks manually or use Smart Excel Paste to save time.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            
+            <div class="xl:col-span-3 space-y-6">
+                <form hx-post="{% url 'received_goods' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="glass-panel rounded-2xl p-6 bg-white border border-gray-100 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-6 relative overflow-hidden">
+                        <div class="absolute left-0 top-0 w-1 h-full bg-gradient-to-b from-blue-400 to-indigo-500"></div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"><i class="fas fa-truck mr-1 text-blue-500"></i> Select Supplier *</label>
+                            <select name="supplier" required class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50/30 font-semibold text-gray-700 cursor-pointer transition hover:border-blue-300">
+                                {% for s in suppliers %}
+                                <option value="{{ s.id }}">{{ s.name }} ({{ s.contact_person }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2"><i class="fas fa-warehouse mr-1 text-emerald-500"></i> Destination Warehouse *</label>
+                            <select name="warehouse" required class="w-full border border-gray-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50/30 font-semibold text-gray-700 cursor-pointer transition hover:border-emerald-300">
+                                {% for w in warehouses %}
+                                <option value="{{ w.id }}">{{ w.name }} - {{ w.location }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl shadow-sm border border-gray-100 overflow-hidden bg-white">
+                        
+                        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/80 flex flex-col sm:flex-row justify-between items-center gap-4">
+                            <div class="flex space-x-2 bg-gray-200/60 p-1.5 rounded-xl">
+                                <button type="button" onclick="switchTab('grid')" id="btn-grid" class="px-5 py-2 rounded-lg text-sm font-black bg-white text-blue-600 shadow-sm transition">
+                                    <i class="fas fa-list-ol mr-1"></i> Manual Grid
+                                </button>
+                                <button type="button" onclick="switchTab('paste')" id="btn-paste" class="px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition">
+                                    <i class="fas fa-file-excel mr-1 text-green-500"></i> Smart Paste
+                                </button>
+                            </div>
+                            
+                            <button type="submit" class="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-8 py-2.5 rounded-xl font-black text-sm shadow-md shadow-emerald-500/20 transition transform hover:-translate-y-0.5 flex items-center">
+                                <i class="fas fa-check-circle mr-2"></i> Save All Stock
+                            </button>
+                        </div>
+                        
+                        <div id="grid-content" class="block">
+                            <div class="p-4 flex justify-end">
+                                <button type="button" onclick="addNewRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg text-xs font-black transition flex items-center">
+                                    <i class="fas fa-plus mr-1.5"></i> Add New Row
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto pb-4">
+                                <table class="w-full text-left border-collapse min-w-[800px]" id="invoiceTable">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-y border-gray-200">
+                                            <th class="px-6 py-3 font-bold w-1/3">Select Product</th>
+                                            <th class="px-4 py-3 font-bold">Batch Number</th>
+                                            <th class="px-4 py-3 font-bold w-32">Qty Received</th>
+                                            <th class="px-4 py-3 font-bold">Expiry Date</th>
+                                            <th class="px-4 py-3 font-bold text-center w-16">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm text-gray-700 divide-y divide-gray-100" id="invoiceTableBody">
+                                        <tr class="hover:bg-blue-50/20 transition-colors">
+                                            <td class="px-6 py-3">
+                                                <select name="product[]" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none bg-white font-medium">
+                                                    <option value="">Choose product...</option>
+                                                    
+                                                    <optgroup label="🚨 Out of Stock Items" class="text-red-500 font-bold bg-red-50">
+                                                        {% for p in out_of_stock %}
+                                                        <option value="{{ p.id }}" class="text-gray-800 font-medium">{{ p.name }} ({{ p.pack_size }})</option>
+                                                        {% endfor %}
+                                                    </optgroup>
+                                                    
+                                                    <optgroup label="✅ In Stock Items" class="text-green-600 font-bold bg-green-50">
+                                                        {% for p in in_stock %}
+                                                        <option value="{{ p.id }}" class="text-gray-800 font-medium">{{ p.name }} ({{ p.pack_size }}) - Stock: {{ p.stock_quantity }}</option>
+                                                        {% endfor %}
+                                                    </optgroup>
+
+                                                </select>
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="text" name="batch_number[]" placeholder="e.g. BAT-2026" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none bg-white font-medium">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="number" name="quantity[]" min="1" placeholder="0" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none bg-white font-black text-indigo-600">
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                <input type="date" name="expiry_date[]" class="w-full border border-gray-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-400 outline-none bg-white text-gray-600">
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <button type="button" onclick="removeRow(this)" class="text-gray-300 hover:text-red-500 bg-white hover:bg-red-50 rounded p-1.5 transition border border-transparent hover:border-red-100">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div id="paste-content" class="hidden p-6 bg-gradient-to-br from-green-50/50 to-emerald-50/50">
+                            <div class="border border-emerald-200 bg-white rounded-2xl p-6 shadow-sm">
+                                <div class="flex items-start mb-4">
+                                    <div class="bg-emerald-100 text-emerald-600 p-3 rounded-xl mr-4">
+                                        <i class="fas fa-file-excel text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-bold text-emerald-800">Smart Excel Paste</h3>
+                                        <p class="text-xs text-gray-500 mt-1">Copy 4 columns from Excel: <b>Product Name (Exact Match), Batch Number, Quantity, Expiry Date</b></p>
+                                    </div>
+                                </div>
+                                <textarea name="bulk_data" id="bulkInput" rows="6" class="w-full border-2 border-emerald-100 rounded-xl p-4 text-sm focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-400 outline-none bg-emerald-50/20 font-mono resize-y placeholder-gray-400"></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </form>
+
+                <div class="mt-8 mb-4 flex items-center">
+                    <h3 class="text-sm font-black text-gray-800 uppercase tracking-widest"><i class="fas fa-history text-gray-400 mr-2"></i>Recent Inward Logs</h3>
+                    <div class="h-px bg-gray-200 flex-1 ml-4"></div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for batch in recent_stocks %}
+                    <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition flex flex-col relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+                        <div class="relative z-10">
+                            <span class="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-1 rounded-md mb-2 inline-block">BATCH: {{ batch.batch_number }}</span>
+                            <h4 class="text-sm font-bold text-gray-800 line-clamp-1 mb-1">{{ batch.product.name }}</h4>
+                            <p class="text-xs text-gray-500 mb-3"><i class="fas fa-truck text-gray-400 mr-1"></i> {{ batch.supplier.name }}</p>
+                            <div class="flex justify-between items-end mt-auto pt-3 border-t border-gray-50">
+                                <div>
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold">Qty Added</p>
+                                    <p class="text-lg font-black text-emerald-600">+{{ batch.quantity_received }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-[10px] text-gray-400 uppercase font-bold">Expiry</p>
+                                    <p class="text-xs font-bold {% if batch.expiry_date %}text-red-500{% else %}text-gray-400{% endif %}">{% if batch.expiry_date %}{{ batch.expiry_date|date:"d M Y" }}{% else %}N/A{% endif %}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="xl:col-span-1">
+                <div class="glass-panel rounded-2xl shadow-sm border border-gray-100 bg-white flex flex-col h-[600px] xl:h-[800px] overflow-hidden sticky top-4">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="text-sm font-black text-gray-800"><i class="fas fa-clipboard-check text-blue-500 mr-2"></i>Live Stock Tracker</h3>
+                    </div>
+                    
+                    <div class="p-3 border-b border-gray-100 flex space-x-2 bg-white">
+                        <button onclick="toggleStockView('out')" id="tab-out" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-red-100 text-red-700 transition">
+                            Out of Stock ({{ out_of_stock.count }})
+                        </button>
+                        <button onclick="toggleStockView('in')" id="tab-in" class="flex-1 py-1.5 text-xs font-bold rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200 transition">
+                            In Stock ({{ in_stock.count }})
+                        </button>
+                    </div>
+
+                    <div id="list-out" class="flex-1 overflow-y-auto p-2 block bg-red-50/30">
+                        <ul class="space-y-1">
+                            {% for p in out_of_stock %}
+                            <li class="p-3 rounded-lg border border-red-100 bg-white shadow-sm hover:shadow-md transition">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-gray-800 line-clamp-1 flex-1 pr-2 select-all">{{ p.name }}</span>
+                                    <span class="text-[10px] font-black text-red-500 bg-red-50 px-2 py-0.5 rounded border border-red-100">Zero</span>
+                                </div>
+                            </li>
+                            {% empty %}
+                            <div class="p-5 text-center text-gray-400 text-xs font-bold">
+                                <i class="fas fa-check-circle text-2xl text-green-400 mb-2 block"></i>
+                                All products are fully stocked!
+                            </div>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <div id="list-in" class="flex-1 overflow-y-auto p-2 hidden bg-green-50/30">
+                        <ul class="space-y-1">
+                            {% for p in in_stock %}
+                            <li class="p-3 rounded-lg border border-green-100 bg-white shadow-sm hover:shadow-md transition">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-gray-800 line-clamp-1 flex-1 pr-2 select-all">{{ p.name }}</span>
+                                    <span class="text-[10px] font-black text-green-700 bg-green-100 px-2 py-0.5 rounded border border-green-200">{{ p.stock_quantity }} qty</span>
+                                </div>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            const gridBtn = document.getElementById('btn-grid');
+            const pasteBtn = document.getElementById('btn-paste');
+            const gridContent = document.getElementById('grid-content');
+            const pasteContent = document.getElementById('paste-content');
+            const bulkInput = document.getElementById('bulkInput');
+
+            if (tab === 'grid') {
+                gridBtn.className = "px-5 py-2 rounded-lg text-sm font-black bg-white text-blue-600 shadow-sm transition";
+                pasteBtn.className = "px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition";
+                gridContent.classList.remove('hidden');
+                gridContent.classList.add('block');
+                pasteContent.classList.remove('block');
+                pasteContent.classList.add('hidden');
+                bulkInput.value = ""; // Clear bulk
+            } else {
+                pasteBtn.className = "px-5 py-2 rounded-lg text-sm font-black bg-white text-emerald-600 shadow-sm transition";
+                gridBtn.className = "px-5 py-2 rounded-lg text-sm font-bold text-gray-500 hover:text-gray-700 transition";
+                pasteContent.classList.remove('hidden');
+                pasteContent.classList.add('block');
+                gridContent.classList.remove('block');
+                gridContent.classList.add('hidden');
+            }
+        }
+
+        function addNewRow() {
+            const tbody = document.getElementById('invoiceTableBody');
+            const firstRow = tbody.querySelector('tr');
+            const newRow = firstRow.cloneNode(true);
+            newRow.querySelector('select').value = "";
+            newRow.querySelectorAll('input').forEach(input => input.value = "");
+            tbody.appendChild(newRow);
+        }
+
+        function removeRow(button) {
+            const tbody = document.getElementById('invoiceTableBody');
+            if (tbody.querySelectorAll('tr').length > 1) {
+                const row = button.closest('tr');
+                row.remove();
+            } else {
+                alert("At least one item row is mandatory!");
+            }
+        }
+
+        // Live Stock Tracker Switcher
+        function toggleStockView(view) {
+            const outTab = document.getElementById('tab-out');
+            const inTab = document.getElementById('tab-in');
+            const outList = document.getElementById('list-out');
+            const inList = document.getElementById('list-in');
+
+            if (view === 'out') {
+                outTab.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-red-100 text-red-700 transition";
+                inTab.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200 transition";
+                outList.classList.remove('hidden');
+                outList.classList.add('block');
+                inList.classList.remove('block');
+                inList.classList.add('hidden');
+            } else {
+                inTab.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-green-100 text-green-700 transition";
+                outTab.className = "flex-1 py-1.5 text-xs font-bold rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200 transition";
+                inList.classList.remove('hidden');
+                inList.classList.add('block');
+                outList.classList.remove('block');
+                outList.classList.add('hidden');
+            }
+        }
+    </script>
+</main>

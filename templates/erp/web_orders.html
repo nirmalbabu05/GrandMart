@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Orders - GrandMart ERP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col relative">
+
+    <nav class="bg-gray-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{% url 'erp_dashboard' %}" class="w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-lg flex items-center justify-center mr-4 transition text-gray-300 hover:text-white">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
+                    <h1 class="text-xl font-black tracking-tight"><i class="fas fa-globe text-blue-500 mr-2"></i> Live Web Orders</h1>
+                </div>
+                <div class="flex items-center">
+                    <span class="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30 flex items-center">
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> Auto-Sync Active
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-yellow-400 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">New / Pending</p>
+                    <h3 class="text-3xl font-black text-gray-800 mt-1">{{ pending_count }}</h3>
+                </div>
+                <div class="w-14 h-14 bg-yellow-50 rounded-full flex items-center justify-center text-yellow-500 text-2xl"><i class="fas fa-clock"></i></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-blue-500 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Packing</p>
+                    <h3 class="text-3xl font-black text-gray-800 mt-1">{{ packing_count }}</h3>
+                </div>
+                <div class="w-14 h-14 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 text-2xl"><i class="fas fa-box-open"></i></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-orange-500 flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">On The Way</p>
+                    <h3 class="text-3xl font-black text-gray-800 mt-1">{{ delivery_count }}</h3>
+                </div>
+                <div class="w-14 h-14 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 text-2xl"><i class="fas fa-motorcycle"></i></div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <h2 class="text-lg font-black text-gray-800 tracking-tight">Recent Orders</h2>
+                <button onclick="window.location.reload()" class="text-blue-600 hover:text-blue-800 font-bold text-sm flex items-center transition">
+                    <i class="fas fa-sync-alt mr-2"></i> Refresh
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                            <th class="px-6 py-4 font-black">Invoice & Date</th>
+                            <th class="px-6 py-4 font-black">Customer Details</th>
+                            <th class="px-6 py-4 font-black">Amount</th>
+                            <th class="px-6 py-4 font-black">Current Status</th>
+                            <th class="px-6 py-4 font-black text-right">Update Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for order in orders %}
+                        <tr class="hover:bg-gray-50/50 transition duration-150">
+                            
+                            <td class="px-6 py-4">
+                                <div class="font-black text-blue-600 mb-1">{{ order.invoice_number }}</div>
+                                <div class="text-xs font-bold text-gray-400"><i class="fas fa-calendar-alt mr-1"></i> {{ order.created_at|date:"d M Y, h:i A" }}</div>
+                            </td>
+                            
+                            <td class="px-6 py-4 max-w-[250px]">
+                                <div class="font-bold text-gray-800">{{ order.customer_name }}</div>
+                                <div class="text-xs font-bold text-gray-500 mt-0.5"><i class="fas fa-phone-alt text-gray-400 mr-1"></i> {{ order.customer_phone }}</div>
+                                <div class="text-xs text-gray-500 mt-1 truncate" title="{{ order.shipping_address }}"><i class="fas fa-map-marker-alt text-gray-400 mr-1"></i> {{ order.shipping_address }}</div>
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                <div class="font-black text-gray-900 text-lg">₹{{ order.grand_total }}</div>
+                                <div class="text-[10px] font-bold text-gray-400 uppercase">{{ order.payment_method }}</div>
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                {% if order.status == 'Pending' %}
+                                    <span class="bg-yellow-100 text-yellow-800 border border-yellow-200 px-3 py-1 rounded-lg text-xs font-black tracking-wide"><i class="fas fa-circle text-[8px] mr-1"></i> PENDING</span>
+                                {% elif order.status == 'Packing' %}
+                                    <span class="bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1 rounded-lg text-xs font-black tracking-wide"><i class="fas fa-box text-[10px] mr-1"></i> PACKING</span>
+                                {% elif order.status == 'Out for Delivery' %}
+                                    <span class="bg-orange-100 text-orange-800 border border-orange-200 px-3 py-1 rounded-lg text-xs font-black tracking-wide"><i class="fas fa-motorcycle text-[10px] mr-1"></i> ON THE WAY</span>
+                                {% elif order.status == 'Delivered' %}
+                                    <span class="bg-green-100 text-green-800 border border-green-200 px-3 py-1 rounded-lg text-xs font-black tracking-wide"><i class="fas fa-check text-[10px] mr-1"></i> DELIVERED</span>
+                                {% else %}
+                                    <span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-lg text-xs font-black tracking-wide">{{ order.status }}</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-end space-x-2">
+                                    <form method="POST" action="{% url 'web_orders' %}" class="flex items-center space-x-2">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="order_id" value="{{ order.id }}">
+                                        
+                                        <select name="status" class="bg-gray-50 border-2 border-gray-200 text-gray-800 text-xs font-bold rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none cursor-pointer transition shadow-sm">
+                                            <option value="Pending" {% if order.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                            <option value="Packing" {% if order.status == 'Packing' %}selected{% endif %}>Packing</option>
+                                            <option value="Out for Delivery" {% if order.status == 'Out for Delivery' %}selected{% endif %}>Out for Delivery</option>
+                                            <option value="Delivered" {% if order.status == 'Delivered' %}selected{% endif %}>Delivered</option>
+                                        </select>
+                                        
+                                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-8 h-8 rounded-xl flex items-center justify-center transition shadow-md active:scale-95" title="Update Status">
+                                            <i class="fas fa-arrow-right text-xs"></i>
+                                        </button>
+                                    </form>
+
+                                    <button data-url="{% url 'print_invoice' order.id %}" onclick="openInvoiceModal(this.dataset.url)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-xl flex items-center justify-center transition shadow-sm active:scale-95 border border-gray-300 ml-2" title="View Invoice">
+                                        <i class="fas fa-file-invoice text-xs"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-16 text-center">
+                                <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <i class="fas fa-inbox text-3xl text-gray-300"></i>
+                                </div>
+                                <h3 class="text-lg font-black text-gray-800 mb-1">No Web Orders Yet</h3>
+                                <p class="text-gray-500 font-bold text-sm">When customers order online, they will appear here.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="invoiceModal" class="fixed inset-0 bg-gray-950/70 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4 transition-opacity duration-300">
+        <div class="bg-white w-full max-w-3xl h-[85vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-100">
+            <div class="bg-gray-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <h3 class="font-black text-lg flex items-center"><i class="fas fa-file-invoice-dollar text-blue-500 mr-2"></i> Order Invoice</h3>
+                <button onclick="closeInvoiceModal()" class="w-8 h-8 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center text-white transition transform hover:rotate-90">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div class="flex-1 bg-gray-100">
+                <iframe id="invoiceIframe" src="" class="w-full h-full border-none"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openInvoiceModal(url) {
+            const modal = document.getElementById('invoiceModal');
+            const iframe = document.getElementById('invoiceIframe');
+            iframe.src = url;
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; 
+        }
+
+        function closeInvoiceModal() {
+            const modal = document.getElementById('invoiceModal');
+            const iframe = document.getElementById('invoiceIframe');
+            iframe.src = '';
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto'; 
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeInvoiceModal();
+            }
+        });
+    </script>
+</body>
+</html>

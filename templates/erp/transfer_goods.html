@@ -1,0 +1,112 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-5xl mx-auto w-full">
+            
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight">Transfer Goods</h2>
+                <p class="text-gray-500 mt-1 text-sm">Move inventory stock between your branches and warehouses safely.</p>
+            </div>
+
+            {% if success_msg %}
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-check-circle text-xl mr-3"></i> {{ success_msg }}
+            </div>
+            {% endif %}
+            
+            {% if error_msg %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i> {{ error_msg }}
+            </div>
+            {% endif %}
+
+            <div class="glass-panel rounded-2xl p-8 border-t-4 border-t-indigo-500 bg-white/90 mb-8 shadow-sm">
+                <form hx-post="{% url 'transfer_goods' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Select Product <span class="text-red-500">*</span></label>
+                            <select name="product" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-400" required>
+                                <option value="" disabled selected>-- Select Product to Transfer --</option>
+                                {% for p in products %}
+                                    <option value="{{ p.id }}">{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                                <i class="fas fa-upload text-orange-500 mr-1"></i> From (Source) <span class="text-red-500">*</span>
+                            </label>
+                            <select name="source_warehouse" class="w-full p-3 rounded-lg border border-orange-200 bg-orange-50 outline-none focus:ring-2 focus:ring-orange-400 font-semibold" required>
+                                {% for w in warehouses %}
+                                    <option value="{{ w.id }}">{{ w.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                                <i class="fas fa-download text-teal-500 mr-1"></i> To (Destination) <span class="text-red-500">*</span>
+                            </label>
+                            <select name="dest_warehouse" class="w-full p-3 rounded-lg border border-teal-200 bg-teal-50 outline-none focus:ring-2 focus:ring-teal-400 font-semibold" required>
+                                {% for w in warehouses %}
+                                    <option value="{{ w.id }}">{{ w.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Transfer Quantity <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <i class="fas fa-cubes absolute left-3 top-3.5 text-gray-400"></i>
+                                <input type="number" min="1" name="quantity" class="w-full pl-10 p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-indigo-400 font-bold" placeholder="0" required>
+                            </div>
+                        </div>
+                        <div class="flex justify-end mt-6">
+                            <button type="submit" class="w-full bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center shadow-lg shadow-indigo-200">
+                                <i class="fas fa-exchange-alt mr-2"></i> Execute Transfer
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-gray-700 bg-white/90 shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-list-ol mr-2 text-gray-500"></i> Current Inventory Snapshot
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                <th class="px-4 py-3">Product Name</th>
+                                <th class="px-4 py-3">Location / Godown</th>
+                                <th class="px-4 py-3">Batch Number</th>
+                                <th class="px-4 py-3 text-center">Available Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for batch in batches %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 font-bold text-gray-800">{{ batch.product.name }}</td>
+                                <td class="px-4 py-3"><span class="bg-gray-100 text-gray-600 px-2 py-1 rounded font-semibold text-xs">{{ batch.warehouse.name }}</span></td>
+                                <td class="px-4 py-3 text-gray-500">{{ batch.batch_number|default:"N/A" }}</td>
+                                <td class="px-4 py-3 font-black text-blue-600 text-center">{{ batch.stock_quantity }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-10 text-gray-400 font-bold">No active stock available.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>

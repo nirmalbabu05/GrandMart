@@ -1,0 +1,106 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-5xl mx-auto w-full">
+            
+            <div class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 tracking-tight">Stock Take / Audit</h2>
+                    <p class="text-gray-500 mt-1 text-sm">Compare physical stock against system stock and auto-adjust discrepancies.</p>
+                </div>
+            </div>
+
+            {% if success_msg %}
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-info-circle text-xl mr-3"></i> {{ success_msg }}
+            </div>
+            {% endif %}
+            
+            {% if error_msg %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-exclamation-triangle text-xl mr-3"></i> {{ error_msg }}
+            </div>
+            {% endif %}
+
+            <div class="glass-panel rounded-2xl p-8 border-t-4 border-t-teal-500 bg-white/90 mb-8 shadow-sm">
+                <form hx-post="{% url 'stock_take' %}" hx-target="#app-content" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Select Product to Audit <span class="text-red-500">*</span></label>
+                            <select name="product" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-400 font-bold" required>
+                                <option value="" disabled selected>-- Select Product --</option>
+                                {% for p in products %}
+                                    <option value="{{ p.id }}">{{ p.name }} (₹{{ p.selling_price }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Godown / Location <span class="text-red-500">*</span></label>
+                            <select name="warehouse" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-400" required>
+                                {% for w in warehouses %}
+                                    <option value="{{ w.id }}">{{ w.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Actual Physical Count <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <i class="fas fa-clipboard-check absolute left-3 top-3.5 text-gray-400"></i>
+                                <input type="number" min="0" name="physical_qty" class="w-full pl-10 p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-teal-400 font-black text-teal-700" placeholder="0" required>
+                            </div>
+                            <p class="text-[10px] text-gray-400 font-bold mt-2"><i class="fas fa-info-circle"></i> Count the items on the shelf and enter the exact number.</p>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit" class="w-full bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition shadow-lg shadow-teal-200">
+                                Verify & Adjust Stock
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-gray-700 bg-white/90 shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-server mr-2 text-gray-500"></i> Current System Inventory (Reference)
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                <th class="px-4 py-3">Barcode</th>
+                                <th class="px-4 py-3">Product Name</th>
+                                <th class="px-4 py-3">Category</th>
+                                <th class="px-4 py-3 text-center">System Recorded Stock</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for item in inventory %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 text-gray-500 text-xs font-mono">{{ item.product.barcode|default:"N/A" }}</td>
+                                <td class="px-4 py-3 font-bold text-gray-800">{{ item.product.name }}</td>
+                                <td class="px-4 py-3">{{ item.product.category.name }}</td>
+                                <td class="px-4 py-3 font-black text-blue-600 text-center">
+                                    {% if item.system_qty == 0 %}
+                                        <span class="text-red-500 bg-red-50 px-2 py-1 rounded">Out of Stock</span>
+                                    {% else %}
+                                        {{ item.system_qty }} {{ item.product.unit.short_name }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-10 text-gray-400 font-bold">No active products found in system.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>

@@ -1,0 +1,51 @@
+{% if products or orders %}
+    <div class="max-h-96 overflow-y-auto rounded-xl">
+        
+        {% if products %}
+        <div class="p-2 bg-blue-50 border-b border-gray-100 text-[10px] font-black text-blue-500 uppercase tracking-wider sticky top-0">
+            <i class="fas fa-box mr-1"></i> Products ({{ products|length }})
+        </div>
+        <ul>
+            {% for p in products %}
+            <li class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center p-3 cursor-pointer">
+                    <div class="bg-gray-100 text-gray-500 w-8 h-8 rounded-lg flex items-center justify-center mr-3"><i class="fas fa-tag"></i></div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">{{ p.name }}</p>
+                        <p class="text-[10px] text-gray-500 font-semibold">
+                            Barcode: {{ p.barcode|default:"N/A" }} | Stock: <span class="text-green-600 font-bold">₹{{ p.selling_price }}</span>
+                        </p>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if orders %}
+        <div class="p-2 bg-green-50 border-y border-gray-100 text-[10px] font-black text-green-600 uppercase tracking-wider sticky top-0">
+            <i class="fas fa-file-invoice mr-1"></i> Invoices ({{ orders|length }})
+        </div>
+        <ul>
+            {% for o in orders %}
+            <li class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                <div class="flex items-center p-3 cursor-pointer">
+                    <div class="bg-gray-100 text-gray-500 w-8 h-8 rounded-lg flex items-center justify-center mr-3"><i class="fas fa-receipt"></i></div>
+                    <div>
+                        <p class="text-sm font-bold text-gray-800">INV-{{ o.id|stringformat:"05d" }}</p>
+                        <p class="text-[10px] text-gray-500 font-semibold">{{ o.created_at|date:"M d, Y" }} | Total: ₹{{ o.grand_total }}</p>
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        
+    </div>
+{% else %}
+    <div class="p-6 text-center text-gray-500">
+        <i class="fas fa-search-minus text-3xl mb-2 text-gray-300"></i>
+        <p class="text-sm font-bold">No results found for "{{ query }}"</p>
+        <p class="text-[10px] mt-1">Try a different product name or invoice ID.</p>
+    </div>
+{% endif %}

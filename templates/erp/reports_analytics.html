@@ -1,0 +1,82 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-6xl mx-auto w-full">
+            
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight">Reports & Analytics</h2>
+                <p class="text-gray-500 mt-1 text-sm">Real-time business insights and overall store performance.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-blue-500 bg-white/90 shadow-sm flex items-center">
+                    <div class="p-4 bg-blue-100 rounded-full text-blue-600 mr-4"><i class="fas fa-rupee-sign text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Lifetime Revenue</p>
+                        <h3 class="text-2xl font-black text-gray-800">₹{{ total_revenue|floatformat:2 }}</h3>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-emerald-500 bg-white/90 shadow-sm flex items-center">
+                    <div class="p-4 bg-emerald-100 rounded-full text-emerald-600 mr-4"><i class="fas fa-shopping-cart text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Bills/Orders</p>
+                        <h3 class="text-2xl font-black text-gray-800">{{ total_orders }}</h3>
+                    </div>
+                </div>
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-purple-500 bg-white/90 shadow-sm flex items-center">
+                    <div class="p-4 bg-purple-100 rounded-full text-purple-600 mr-4"><i class="fas fa-box text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Products in Catalog</p>
+                        <h3 class="text-2xl font-black text-gray-800">{{ total_products }}</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl shadow-sm p-6 border border-gray-100 mb-8 bg-white/80">
+                <h3 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-chart-bar text-blue-500 mr-2"></i> Sales Growth (Last 7 Days)</h3>
+                <div class="relative h-72 w-full">
+                    <canvas id="reportsAnalyticsChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script>
+    // Using an IIFE to keep scope clean and avoid variable conflicts
+    (function() {
+        const canvas = document.getElementById('reportsAnalyticsChart');
+        if(canvas) {
+            // Check if there is an existing chart instance on this canvas, destroy if needed
+            let chartStatus = Chart.getChart("reportsAnalyticsChart"); 
+            if (chartStatus != undefined) {
+                chartStatus.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            
+            // Safe JSON parsing to prevent JavaScript syntax errors
+            const rawLabels = '{{ chart_labels|safe|escapejs }}';
+            const rawData = '{{ chart_data|safe|escapejs }}';
+            
+            const chartLabels = JSON.parse(rawLabels);
+            const chartData = JSON.parse(rawData);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Sales Revenue (₹)',
+                        data: chartData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+    })();
+</script>

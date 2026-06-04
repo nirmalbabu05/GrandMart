@@ -1,0 +1,112 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-6xl mx-auto w-full">
+
+            <div class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 tracking-tight">Stock Balance</h2>
+                    <p class="text-gray-500 mt-1 text-sm">Real-time inventory levels across all godowns and branches.</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-gray-50 text-sm flex items-center transition">
+                        <i class="fas fa-filter mr-2 text-gray-400"></i> Filter
+                    </button>
+                    <button class="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-5 py-2 rounded-lg shadow-md font-bold transition-all transform hover:-translate-y-0.5 text-sm flex items-center">
+                        <i class="fas fa-download mr-2"></i> Export Stock
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-blue-500 bg-white/90 shadow-sm flex items-center group">
+                    <div class="p-4 bg-blue-100 rounded-full text-blue-600 mr-4 group-hover:scale-110 transition-transform"><i class="fas fa-boxes text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Units in Stock</p>
+                        <h3 class="text-2xl font-black text-gray-800">{{ total_stock_qty }} Units</h3>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-orange-500 bg-white/90 shadow-sm flex items-center group">
+                    <div class="p-4 bg-orange-100 rounded-full text-orange-600 mr-4 group-hover:scale-110 transition-transform"><i class="fas fa-exclamation-triangle text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Low Stock Alerts</p>
+                        <h3 class="text-2xl font-black text-gray-800">{{ low_stock_count }} Batches</h3>
+                    </div>
+                </div>
+
+                {% if request.user.is_superuser %}
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-emerald-500 bg-white/90 shadow-sm flex items-center group">
+                    <div class="p-4 bg-emerald-100 rounded-full text-emerald-600 mr-4 group-hover:scale-110 transition-transform"><i class="fas fa-rupee-sign text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Est. Inventory Value</p>
+                        <h3 class="text-2xl font-black text-gray-800">₹{{ total_inventory_value|floatformat:2 }}</h3>
+                    </div>
+                </div>
+                {% else %}
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-gray-400 bg-gray-50 shadow-sm flex items-center opacity-80 cursor-not-allowed">
+                    <div class="p-4 bg-gray-200 rounded-full text-gray-500 mr-4"><i class="fas fa-lock text-2xl"></i></div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Financial Data</p>
+                        <h3 class="text-sm font-black text-gray-500 mt-1">Admin Access Required</h3>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-gray-700 bg-white/90 shadow-sm">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-800 flex items-center"><i class="fas fa-list mr-2 text-gray-500"></i> Current Inventory Details</h3>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-sm"></i>
+                        <input type="text" placeholder="Search product..." class="pl-9 p-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-700 focus:outline-none focus:border-blue-400 bg-gray-50 focus:bg-white transition-colors w-64">
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-gray-200">
+                                <th class="px-4 py-3 font-bold">Barcode</th>
+                                <th class="px-4 py-3 font-bold">Product Name</th>
+                                <th class="px-4 py-3 font-bold">Category</th>
+                                <th class="px-4 py-3 font-bold">Batch & Godown</th>
+                                <th class="px-4 py-3 text-center font-bold">Available Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for batch in batches %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 text-gray-400 text-xs font-mono font-bold">{{ batch.product.barcode|default:"N/A" }}</td>
+                                <td class="px-4 py-3 font-bold text-gray-800">{{ batch.product.name }}</td>
+                                <td class="px-4 py-3 text-gray-600 font-semibold">{{ batch.product.category.name }}</td>
+                                <td class="px-4 py-3">
+                                    <span class="font-bold text-gray-700">{{ batch.batch_number }}</span><br>
+                                    <span class="text-[10px] text-gray-500 font-semibold"><i class="fas fa-map-marker-alt text-gray-400 mr-1"></i> {{ batch.warehouse.name }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    {% if batch.stock_quantity <= 10 %}
+                                        <span class="bg-red-50 border border-red-200 text-red-600 px-3 py-1 rounded-md font-black text-xs shadow-sm">{{ batch.stock_quantity }} {{ batch.product.unit.short_name }}</span>
+                                    {% else %}
+                                        <span class="bg-blue-50 border border-blue-200 text-blue-700 px-3 py-1 rounded-md font-bold text-xs shadow-sm">{{ batch.stock_quantity }} {{ batch.product.unit.short_name }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-12 text-gray-400">
+                                    <i class="fas fa-box-open text-4xl mb-3 block text-gray-300"></i>
+                                    <span class="font-bold text-sm">No stock available in inventory.</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>

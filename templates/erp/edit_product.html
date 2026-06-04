@@ -1,0 +1,119 @@
+<div class="animate-[slideIn_0.3s_ease-out] w-full max-w-4xl mx-auto pb-10">
+    
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 space-y-4 sm:space-y-0">
+        <div>
+            <h2 class="text-2xl font-black text-gray-800 tracking-tight">Edit Product ✏️</h2>
+            <p class="text-gray-500 text-sm font-medium mt-1">Updating: <span class="font-black text-blue-600">{{ product.name }}</span></p>
+        </div>
+        <button hx-get="{% url 'store_master' %}" hx-target="#app-content" hx-swap="innerHTML" class="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-5 py-2.5 rounded-xl shadow-sm font-bold transition flex items-center justify-center w-full sm:w-auto">
+            <i class="fas fa-arrow-left mr-2"></i> Back to Store Master
+        </button>
+    </div>
+
+    <div class="glass-panel bg-white/90 rounded-3xl shadow-lg border border-gray-100 overflow-hidden">
+        <form hx-post="{% url 'edit_product' product.id %}" hx-target="#app-content" hx-swap="innerHTML" class="p-6 md:p-8">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Product Name *</label>
+                    <input type="text" name="name" value="{{ product.name }}" id="editProductName" required class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition" oninput="updateEditImagePreview(document.getElementById('editImageUrl').value)">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Category *</label>
+                    <select name="category" required class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition cursor-pointer">
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if product.category.id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Size / Qty *</label>
+                    <input type="text" name="pack_size" value="{{ product.pack_size }}" required class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Unit</label>
+                    <select name="unit" class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition cursor-pointer">
+                        <option value="">Select Unit...</option>
+                        {% for unit in units %}
+                        <option value="{{ unit.id }}" {% if product.unit and product.unit.id == unit.id %}selected{% endif %}>{{ unit.short_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">MRP Price (₹) *</label>
+                    <input type="number" step="0.01" name="mrp_price" value="{{ product.mrp_price }}" required class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-black text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-black text-blue-500 uppercase tracking-widest mb-2">Selling Price (₹) *</label>
+                    <input type="number" step="0.01" name="selling_price" value="{{ product.selling_price }}" required class="w-full border-2 border-blue-200 rounded-xl p-3 text-sm font-black text-blue-800 focus:ring-4 focus:ring-blue-500/30 focus:border-blue-500 outline-none bg-blue-50 transition shadow-inner">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Barcode</label>
+                    <input type="text" name="barcode" value="{{ product.barcode|default:'' }}" class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Stock Quantity</label>
+                    <input type="number" name="stock_quantity" value="{{ product.stock_quantity }}" required class="w-full border-2 border-gray-100 rounded-xl p-3 text-sm font-black text-gray-800 focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none bg-gray-50 transition">
+                </div>
+
+                <div class="md:col-span-2 mt-2 bg-purple-50/50 border-2 border-purple-100 rounded-2xl p-5 shadow-sm">
+                    <label class="block text-xs font-black text-purple-600 uppercase tracking-widest mb-4">Product Image (URL / Keyword)</label>
+                    <div class="flex flex-col sm:flex-row gap-5 items-start">
+                        
+                        <div class="w-28 h-28 bg-white border-2 border-purple-200 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-sm p-1">
+                            {% if product.image %}
+                                <img id="editImagePreview" src="{{ product.image.url }}" class="w-full h-full object-contain mix-blend-multiply">
+                            {% elif product.image_url %}
+                                <img id="editImagePreview" src="{{ product.image_url }}" class="w-full h-full object-contain mix-blend-multiply">
+                            {% else %}
+                                <img id="editImagePreview" src="https://ui-avatars.com/api/?name={{ product.name|urlencode }}&background=e2e8f0&color=94a3b8" class="w-full h-full object-contain">
+                            {% endif %}
+                        </div>
+                        
+                        <div class="flex-1 w-full space-y-3">
+                            <input type="text" name="image_url" id="editImageUrl" value="{{ product.image_url|default:'' }}" placeholder="Paste new image link here..." 
+                                   class="w-full border-2 border-purple-200 rounded-xl p-3 text-sm font-bold text-gray-800 focus:ring-4 focus:ring-purple-500/30 focus:border-purple-500 outline-none bg-white transition shadow-sm"
+                                   oninput="updateEditImagePreview(this.value)">
+                            
+                            <p class="text-[11px] text-gray-500 font-bold leading-relaxed bg-white/60 p-2 rounded-lg border border-purple-100">
+                                <i class="fas fa-info-circle text-purple-500 mr-1 text-sm"></i> 
+                                Current image is shown. To update, <b>Copy Image Address</b> from Google and paste it here, or just type a keyword!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div class="mt-8 flex flex-col sm:flex-row justify-end gap-3 border-t-2 border-dashed border-gray-200 pt-6">
+                <button type="button" hx-get="{% url 'store_master' %}" hx-target="#app-content" hx-swap="innerHTML" class="px-6 py-3 text-gray-500 font-black hover:bg-gray-100 rounded-xl transition border-2 border-gray-200 order-2 sm:order-1">Cancel</button>
+                <button type="submit" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-xl font-black shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 border-b-4 border-indigo-800 order-1 sm:order-2 flex items-center justify-center">
+                    <i class="fas fa-save mr-2"></i> Update Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function updateEditImagePreview(url) {
+        const preview = document.getElementById('editImagePreview');
+        const productName = document.getElementById('editProductName')?.value || 'Product';
+        
+        if (url && (url.startsWith('http') || url.startsWith('data:image'))) {
+            preview.src = url;
+        } else if (url) {
+            preview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(url)}&background=random&color=fff&size=400&bold=true`;
+        } else {
+            preview.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(productName)}&background=e2e8f0&color=94a3b8&size=400&bold=true`;
+        }
+    }
+</script>

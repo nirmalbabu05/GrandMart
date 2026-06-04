@@ -1,0 +1,119 @@
+<div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+            
+    <div class="flex justify-between items-end mb-8">
+        <div>
+            <h2 class="text-3xl font-black text-gray-800 tracking-tight">Categories & Units</h2>
+            <p class="text-gray-500 mt-1 font-medium text-sm">Manage Product Categories and Measurement Units here.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-purple-500 flex flex-col h-[600px]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-tags text-purple-500 mr-2"></i> Categories</h3>
+                <button onclick="openModal('categoryModal')" class="bg-purple-100 text-purple-700 hover:bg-purple-200 px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm">
+                    <i class="fas fa-plus mr-1"></i> Add Category
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-2">
+                {% for cat in categories %}
+                <div class="flex justify-between items-center p-4 bg-white/60 rounded-xl border border-gray-200 mb-3 hover:bg-white transition">
+                    <div>
+                        <h4 class="font-bold text-gray-800">{{ cat.name }}</h4>
+                    </div>
+                    <form hx-post="{% url 'delete_category' cat.id %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-400 hover:text-red-600 transition" onclick="return confirm('Are you sure you want to delete {{ cat.name }}?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-400 py-10 font-bold">No categories added yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-blue-500 flex flex-col h-[600px]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800"><i class="fas fa-balance-scale text-blue-500 mr-2"></i> Measurement Units</h3>
+                <button onclick="openModal('unitModal')" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-4 py-2 rounded-lg text-sm font-bold transition shadow-sm">
+                    <i class="fas fa-plus mr-1"></i> Add Unit
+                </button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-2">
+                {% for u in units %}
+                <div class="flex justify-between items-center p-4 bg-white/60 rounded-xl border border-gray-200 mb-3 hover:bg-white transition">
+                    <div>
+                        <h4 class="font-bold text-gray-800">{{ u.name }}</h4>
+                        <span class="bg-blue-100 text-blue-600 text-[10px] px-2 py-0.5 rounded font-black mt-1 inline-block">{{ u.short_name }}</span>
+                    </div>
+                    <form hx-post="{% url 'delete_unit' u.id %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-red-400 hover:text-red-600 transition" onclick="return confirm('Are you sure you want to delete {{ u.name }}?');">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% empty %}
+                <p class="text-center text-gray-400 py-10 font-bold">No units added yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div id="categoryModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-md rounded-2xl shadow-2xl modal-enter overflow-hidden border-t-4 border-t-purple-500 bg-white/95">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800">Add New Category</h3>
+                <button onclick="closeModal('categoryModal')" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form hx-post="{% url 'categories_units' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Category Name</label>
+                        <input type="text" name="name" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:border-purple-500" placeholder="e.g., Frozen Foods" required>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="reset" onclick="closeModal('categoryModal')" class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition border border-gray-200 text-sm">Cancel</button>
+                        <button type="submit" onclick="closeModal('categoryModal')" class="bg-purple-600 text-white px-5 py-2 rounded-lg font-bold shadow-md hover:bg-purple-700 transition text-sm">Save Category</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="unitModal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+        <div class="glass-panel w-full max-w-md rounded-2xl shadow-2xl modal-enter overflow-hidden border-t-4 border-t-blue-500 bg-white/95">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                <h3 class="text-lg font-bold text-gray-800">Add Measurement Unit</h3>
+                <button onclick="closeModal('unitModal')" class="text-gray-400 hover:text-red-500 transition"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form hx-post="{% url 'categories_units' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Unit Name</label>
+                        <input type="text" name="name" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:border-blue-500" placeholder="e.g., Liters" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Short Name (Symbol)</label>
+                        <input type="text" name="short_name" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:border-blue-500" placeholder="e.g., LTR" required>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="reset" onclick="closeModal('unitModal')" class="px-4 py-2 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition border border-gray-200 text-sm">Cancel</button>
+                        <button type="submit" onclick="closeModal('unitModal')" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow-md hover:bg-blue-700 transition text-sm">Save Unit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+    </script>
+</div>

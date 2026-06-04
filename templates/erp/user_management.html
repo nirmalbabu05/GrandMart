@@ -1,0 +1,99 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-5xl mx-auto w-full">
+            
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight">User Management Panel</h2>
+                <p class="text-gray-500 mt-1 text-sm">Create and manage access levels for your Supermarket Staffs and Cashiers.</p>
+            </div>
+
+            {% if success_msg %}
+            <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-check-circle text-xl mr-3"></i> {{ success_msg }}
+            </div>
+            {% endif %}
+            
+            {% if error_msg %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-exclamation-circle text-xl mr-3"></i> {{ error_msg }}
+            </div>
+            {% endif %}
+
+            <div class="glass-panel rounded-2xl p-8 border-t-4 border-t-purple-500 bg-white/90 mb-8 shadow-sm">
+                <h3 class="text-lg font-bold text-gray-800 mb-6"><i class="fas fa-user-plus text-purple-500 mr-2"></i> Add New Staff Terminals</h3>
+                <form hx-post="{% url 'user_management' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Username / Login ID <span class="text-red-500">*</span></label>
+                            <input type="text" name="username" placeholder="e.g., cashier_nirmal" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-purple-400 font-semibold" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Password <span class="text-red-500">*</span></label>
+                            <input type="password" name="password" placeholder="••••••••" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-purple-400" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Role Permissions <span class="text-red-500">*</span></label>
+                            <select name="role" class="w-full p-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-purple-400 font-bold" required>
+                                <option value="cashier">Cashier (Billing Terminal Only)</option>
+                                <option value="admin">Manager / Admin (Full Access Override)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-purple-700 transition shadow-md shadow-purple-100">
+                            Create Staff Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-gray-700 bg-white/90 shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center"><i class="fas fa-users mr-2 text-gray-500"></i> Active System Terminals</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                <th class="px-4 py-3">Terminal Username</th>
+                                <th class="px-4 py-3">Access Level</th>
+                                <th class="px-4 py-3">Joined Date</th>
+                                <th class="px-4 py-3 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for u in users %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 font-bold text-blue-600 flex items-center">
+                                    <i class="fas fa-user-circle mr-2 text-gray-400 text-lg"></i> {{ u.username }}
+                                    {% if u.id == request.user.id %}<span class="text-[10px] ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">YOU</span>{% endif %}
+                                </td>
+                                <td class="px-4 py-3">
+                                    {% if u.is_superuser %}
+                                        <span class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold"><i class="fas fa-shield-alt mr-1"></i> Admin</span>
+                                    {% else %}
+                                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold"><i class="fas fa-cash-register mr-1"></i> Cashier</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-gray-500">{{ u.date_joined|date:"M d, Y" }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    {% if u.id != request.user.id %}
+                                        <form hx-post="{% url 'delete_user' u.id %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" class="inline" onsubmit="return confirm('Are you sure you want to delete this staff account, bro?');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="bg-red-50 hover:bg-red-500 text-red-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center mx-auto gap-1">
+                                                <i class="fas fa-trash-alt text-xs"></i> Delete
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-xs text-gray-400 font-semibold italic">Protected</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>

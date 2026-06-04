@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrandMart ERP - High Tech</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.5); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        .blob {
+            position: fixed;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.6;
+            animation: float 15s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+        }
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+
+        .sidebar-item { transition: all 0.3s ease; cursor: pointer; }
+        .sidebar-item:hover { 
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%);
+            color: #1d4ed8; 
+            transform: translateX(8px); 
+            border-left: 4px solid #3b82f6; 
+        }
+
+        .active-nav {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, transparent 100%) !important;
+            color: #1d4ed8 !important;
+            transform: translateX(8px) !important;
+            border-left: 4px solid #3b82f6 !important;
+        }
+
+        .table-row:hover { background-color: rgba(241, 245, 249, 0.8); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden text-gray-800 font-sans relative bg-slate-50 z-0">
+
+    <div class="blob bg-blue-500 w-[500px] h-[500px] rounded-full top-[-10%] left-[-10%]"></div>
+    <div class="blob bg-purple-500 w-[400px] h-[400px] rounded-full bottom-[-10%] right-[-10%] delay-1000"></div>
+    <div class="blob bg-emerald-400 w-[300px] h-[300px] rounded-full top-[40%] left-[30%] delay-2000 opacity-40"></div>
+
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden transition-opacity opacity-0 md:hidden"></div>
+
+    <aside id="sidebar" class="w-72 flex-shrink-0 glass-panel h-full flex flex-col z-50 border-r border-white/60 absolute md:relative transition-transform duration-300 transform -translate-x-full md:translate-x-0 bg-slate-50/95">
+        
+        <div class="p-6 flex items-center justify-between border-b border-gray-200/50 flex-shrink-0">
+            <div class="flex items-center">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/40 mr-3">
+                    <i class="fas fa-shopping-basket text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-indigo-800 tracking-tight">GrandMart</h1>
+                    <p class="text-[10px] text-blue-600 font-bold tracking-widest uppercase">ERP System</p>
+                </div>
+            </div>
+            <button id="close-sidebar-btn" class="md:hidden text-gray-500 hover:text-red-500 text-xl focus:outline-none">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto" id="sidebarNav">
+            <a hx-get="{% url 'erp_dashboard' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" class="nav-link active-nav sidebar-item flex items-center p-3 text-gray-700 font-bold rounded-xl mb-4 transform transition hover:scale-[1.02] cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-border-all w-8 text-center text-lg"></i>
+                <span class="tracking-wide">Dashboard</span>
+            </a>
+
+            <p class="px-3 pt-2 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Master Configuration</p>
+            
+            <a hx-get="{% url 'store_master' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-database w-8 text-center text-blue-500"></i> <span>Store Master</span>
+            </a>
+            
+            <a hx-get="{% url 'general_master' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-cogs w-8 text-center text-purple-500"></i> <span>Master Data</span>
+            </a>
+            
+            <a hx-get="{% url 'categories_units' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-tags w-8 text-center text-pink-500"></i> <span>Categories & Units</span>
+            </a>
+
+            <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Inventory Setup</p>
+            
+            <a hx-get="{% url 'stock_balance' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-boxes w-8 text-center text-emerald-500"></i> <span>Stock Balance</span>
+            </a>
+            
+            <a hx-get="{% url 'stock_take' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-clipboard-check w-8 text-center text-teal-500"></i> <span>Stock Take</span>
+            </a>
+            
+            <a hx-get="{% url 'received_goods' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-truck-loading w-8 text-center text-orange-500"></i> <span>Received Goods</span>
+            </a>
+
+            <a hx-get="{% url 'transfer_goods' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-exchange-alt w-8 text-center text-indigo-500"></i> <span>Transfer Goods</span>
+            </a>
+            
+            <a hx-get="{% url 'delivery_schedule' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-calendar-alt w-8 text-center text-blue-400"></i> <span>Delivery Schedule</span>
+            </a>
+
+            <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sales & Billing</p>
+            
+            <a href="{% url 'web_orders' %}" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <div class="relative w-8 flex justify-center text-blue-500">
+                    <i class="fas fa-globe"></i>
+                    <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                </div>
+                <span>Web Orders</span>
+            </a>
+
+            <a hx-get="{% url 'pos_terminal' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-desktop w-8 text-center text-blue-600"></i> <span>POS Terminal</span>
+            </a>
+
+            <a hx-get="{% url 'sales_bills' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-file-invoice-dollar w-8 text-center text-green-500"></i> <span>Sales & Bills</span>
+            </a>
+            
+            <a hx-get="{% url 'sales_return' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-undo-alt w-8 text-center text-red-400"></i> <span>Sales Return</span>
+            </a>
+
+            <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Administration</p>
+            
+            <a hx-get="{% url 'user_management' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-users-cog w-8 text-center text-gray-600"></i> <span>User Management</span>
+            </a>
+            
+            <a hx-get="{% url 'reports_analytics' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-chart-line w-8 text-center text-purple-600"></i> <span>Reports & Analytics</span>
+            </a>
+            
+            <a hx-get="{% url 'settings' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm mb-6 cursor-pointer" onclick="closeSidebarOnMobile()">
+                <i class="fas fa-sliders-h w-8 text-center text-gray-500"></i> <span>Settings</span>
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-200/50 flex-shrink-0 bg-white/40">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3 cursor-pointer">
+                    <div class="relative">
+                        <img src="https://ui-avatars.com/api/?name={{ request.user.username|default:'Admin' }}&background=3b82f6&color=fff" class="w-10 h-10 rounded-full shadow-md border-2 border-white">
+                        <span class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm text-gray-800">{{ request.user.username|default:"Admin User"|title }}</p>
+                        <p class="text-[10px] text-gray-500 font-semibold">{% if request.user.is_superuser %}Super Admin{% else %}Cashier{% endif %}</p>
+                    </div>
+                </div>
+                <a href="{% url 'logout' %}" class="text-red-500 hover:text-red-700 transition-colors p-2 rounded-lg hover:bg-red-50 block">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full min-w-0 z-10 relative">
+        
+        <header class="glass-panel shadow-sm flex items-center justify-between px-4 md:px-8 py-4 z-20 flex-shrink-0 bg-white/70">
+            
+            <div class="flex items-center w-full md:w-2/5 z-50">
+                <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-blue-600 focus:outline-none mr-4 transition-transform active:scale-95">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+
+                <div class="relative flex-1">
+                    <div class="flex items-center bg-white rounded-full px-4 md:px-5 py-2 border border-gray-200 shadow-sm focus-within:ring-2 ring-blue-400 transition-all">
+                        <i class="fas fa-search text-gray-400"></i>
+                        <input type="text" id="global-search" name="q" 
+                               hx-get="{% url 'global_search' %}" 
+                               hx-trigger="keyup changed delay:300ms, search" 
+                               hx-target="#search-dropdown" 
+                               placeholder="Search Invoice or Product..." 
+                               class="bg-transparent border-none outline-none ml-2 md:ml-3 w-full text-sm text-gray-700 placeholder-gray-400" autocomplete="off">
+                        <span class="hidden md:inline-block text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold border border-gray-200" title="Press Ctrl+K">Ctrl+K</span>
+                    </div>
+                    <div id="search-dropdown" class="absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden empty:hidden"></div>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3 md:space-x-5 ml-2">
+                <button hx-get="{% url 'pos_terminal' %}" hx-target="#app-content" hx-swap="innerHTML" class="hidden md:flex bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full font-bold text-sm hover:bg-indigo-100 transition shadow-sm border border-indigo-100 items-center">
+                    <i class="fas fa-plus-circle mr-1"></i> Quick POS
+                </button>
+                
+                <a href="{% url 'web_orders' %}" class="relative hidden md:flex bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-blue-200 items-center">
+                    <i class="fas fa-globe mr-2"></i> Web Orders
+                    <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                </a>
+                
+                <div class="relative">
+                    <button onclick="document.getElementById('noti-dropdown').classList.toggle('hidden')" class="text-gray-500 hover:text-blue-600 relative transition-transform hover:scale-110 focus:outline-none">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span class="absolute -top-1 -right-1 bg-red-500 border-2 border-white text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">2</span>
+                    </button>
+                    <div id="noti-dropdown" class="hidden absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-4">
+                        <p class="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-2">System Alerts</p>
+                        <div class="text-sm text-gray-600 space-y-3">
+                            <p class="flex items-start"><i class="fas fa-exclamation-triangle text-orange-500 mt-1 mr-2"></i> Low stock items found. Check inventory!</p>
+                            <p class="flex items-start"><i class="fas fa-truck text-blue-500 mt-1 mr-2"></i> 4 Supplier deliveries pending this week.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <button hx-get="{% url 'settings' %}" hx-target="#app-content" hx-swap="innerHTML" class="text-gray-500 hover:text-blue-600 transition-transform hover:rotate-90">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+            
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 space-y-4 md:space-y-0">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">Business Overview</h2>
+                    <p class="text-gray-500 mt-1 font-medium text-sm">Real-time data and metrics for GrandMart branches.</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button hx-get="{% url 'erp_dashboard' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML" hx-push-url="false" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg shadow-sm font-semibold hover:bg-blue-50 hover:text-blue-600 text-sm flex items-center transition">
+                        <i class="fas fa-sync-alt mr-2"></i> <span class="hidden md:inline">Refresh Data</span>
+                    </button>
+                    <a href="{% url 'export_report' %}" class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-5 py-2 rounded-lg shadow-md font-bold transition-all transform hover:-translate-y-0.5 text-sm flex items-center">
+                        <i class="fas fa-file-csv md:mr-2"></i> <span class="hidden md:inline">Export Report</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <div class="glass-panel bg-white/80 rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-blue-500 group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">Total Revenue</p>
+                            <h3 class="text-2xl md:text-3xl font-black text-gray-800">₹{{ revenue_today|floatformat:2 }}</h3>
+                        </div>
+                        <div class="bg-blue-100 text-blue-600 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-xl shadow-inner group-hover:scale-110 transition-transform"><i class="fas fa-rupee-sign"></i></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel bg-white/80 rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-emerald-500 group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">Orders Today</p>
+                            <h3 class="text-2xl md:text-3xl font-black text-gray-800">{{ total_orders }}</h3>
+                        </div>
+                        <div class="bg-emerald-100 text-emerald-600 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-xl shadow-inner group-hover:scale-110 transition-transform"><i class="fas fa-shopping-bag"></i></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel bg-white/80 rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-orange-500 group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">Low Stock Items</p>
+                            <h3 class="text-2xl md:text-3xl font-black text-gray-800">{{ low_stock_count }}</h3>
+                        </div>
+                        <div class="bg-orange-100 text-orange-600 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-xl shadow-inner group-hover:scale-110 transition-transform"><i class="fas fa-exclamation-triangle"></i></div>
+                    </div>
+                </div>
+
+                <div class="glass-panel bg-white/80 rounded-2xl p-6 relative overflow-hidden border-t-4 border-t-purple-500 group">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-400 text-[11px] font-bold uppercase tracking-widest mb-1">Active Products</p>
+                            <h3 class="text-2xl md:text-3xl font-black text-gray-800">{{ total_products }}</h3>
+                        </div>
+                        <div class="bg-purple-100 text-purple-600 w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-lg md:text-xl shadow-inner group-hover:scale-110 transition-transform"><i class="fas fa-barcode"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 glass-panel bg-white/80 rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Revenue Analytics (Last 7 Days)</h3>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="revenueChart" data-labels="{{ chart_labels }}" data-values="{{ chart_data }}"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel bg-white/80 rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Recent Transactions</h3>
+                        <a href="#" class="text-xs font-bold text-blue-600 hover:underline">View All</a>
+                    </div>
+                    <div class="flex-1 overflow-y-auto pr-2 space-y-4">
+                        <div class="flex items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm mr-3"><i class="fas fa-arrow-down"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800">POS Sale</p>
+                                <p class="text-[11px] text-gray-500">Updated just now</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm mr-3"><i class="fas fa-truck-loading"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800">Goods Received</p>
+                                <p class="text-[11px] text-gray-500">Inventory Sync</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+                            <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-sm mr-3"><i class="fas fa-undo"></i></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-bold text-gray-800">Sales Return</p>
+                                <p class="text-[11px] text-gray-500">Refund Processed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 glass-panel bg-white/80 rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="px-4 md:px-6 py-4 md:py-5 border-b border-gray-200 flex justify-between items-center bg-white/50">
+                    <h3 class="text-lg font-bold text-gray-800">Low Stock Inventory Alerts</h3>
+                    <button class="bg-blue-50 text-blue-600 px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100">Generate PO</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[600px]">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-gray-200">
+                                <th class="px-6 py-4 font-bold">Product Name</th>
+                                <th class="px-6 py-4 font-bold">Category</th>
+                                <th class="px-6 py-4 font-bold">Current Stock</th>
+                                <th class="px-6 py-4 font-bold">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for item in low_stock_items %}
+                            <tr class="table-row border-b border-gray-100 transition-colors">
+                                <td class="px-6 py-4 font-bold flex items-center"><i class="fas fa-box text-gray-400 mr-2"></i> {{ item.product.name }}</td>
+                                <td class="px-6 py-4">{{ item.product.category.name }}</td>
+                                <td class="px-6 py-4 font-bold text-red-500">{{ item.stock_quantity }} {{ item.product.unit.short_name }}</td>
+                                <td class="px-6 py-4"><span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-black tracking-wider uppercase">Low Stock</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="px-6 py-8 text-center text-gray-500 font-bold">No low stock alerts! All good.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> 
+    </main>
+
+    <script>
+        // --- Sidebar Mobile Toggle Logic ---
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('-translate-x-full');
+            
+            if (sidebarOverlay.classList.contains('hidden')) {
+                sidebarOverlay.classList.remove('hidden');
+                setTimeout(() => sidebarOverlay.classList.remove('opacity-0'), 10);
+            } else {
+                sidebarOverlay.classList.add('opacity-0');
+                setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
+            }
+        }
+
+        function closeSidebarOnMobile() {
+            if (window.innerWidth < 768) { 
+                sidebar.classList.add('-translate-x-full');
+                sidebarOverlay.classList.add('opacity-0');
+                setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
+            }
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleSidebar);
+        closeSidebarBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // --- Sidebar Active Class Logic ---
+        document.addEventListener('click', function(e) {
+            let link = e.target.closest('.nav-link');
+            if(link) {
+                document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active-nav'));
+                link.classList.add('active-nav');
+            }
+        });
+
+        // --- HTMX Chart Swap Logic (🌟 100% SIZING BUG FIX 🌟) ---
+        let dashboardChartInstance = null;
+        
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (document.getElementById('revenueChart')) {
+                // DOM Layout முழுசா செட் ஆக ஒரு 50ms டைம் தர்றோம்
+                setTimeout(initDashboardChart, 50);
+            }
+        });
+
+        function initDashboardChart() {
+            const canvas = document.getElementById('revenueChart');
+            if(!canvas) return;
+
+            // பழைய சார்ட் மெமரியில இருந்தா அதை கம்ப்ளீட்டா அழிச்சிடணும்
+            if(dashboardChartInstance) {
+                dashboardChartInstance.destroy();
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            // HTML-ல இருந்து லைவ் டேட்டாவை எடுக்குறோம்
+            const rawLabels = canvas.getAttribute('data-labels');
+            const rawValues = canvas.getAttribute('data-values');
+            
+            const chartLabels = rawLabels ? JSON.parse(rawLabels) : [];
+            const chartData = rawValues ? JSON.parse(rawValues) : [];
+
+            dashboardChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Daily Revenue (₹)',
+                        data: chartData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, // இது தான் கன்டெய்னர் சைஸ்க்கு ஏத்த மாதிரி அடாப்ட் பண்ணும்
+                    animation: { duration: 800 }
+                }
+            });
+        }
+        
+        document.addEventListener("DOMContentLoaded", function() {
+            if (document.getElementById('revenueChart')) {
+                // பேஜ் ஃபர்ஸ்ட் டைம் லோட் ஆகும்போது சின்ன delay
+                setTimeout(initDashboardChart, 50);
+            }
+        });
+
+        // --- Ctrl+K Search Focus Magic ---
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault(); 
+                const searchBox = document.getElementById('global-search');
+                if (searchBox) {
+                    searchBox.focus(); 
+                }
+            }
+        });
+
+        // --- Close Dropdowns Logic ---
+        document.addEventListener('click', function(e) {
+            const notiDropdown = document.getElementById('noti-dropdown');
+            const bellBtn = notiDropdown?.previousElementSibling;
+            if (notiDropdown && !notiDropdown.contains(e.target) && !bellBtn.contains(e.target)) {
+                notiDropdown.classList.add('hidden');
+            }
+
+            const searchDropdown = document.getElementById('search-dropdown');
+            const searchInput = document.getElementById('global-search');
+            if (searchDropdown && !searchDropdown.contains(e.target) && e.target !== searchInput) {
+                searchDropdown.innerHTML = '';
+            }
+        });
+
+        // --- THE GLOBAL HTMX CSRF FIX ---
+        document.body.addEventListener('htmx:configRequest', (event) => {
+            const csrfToken = document.querySelector('input[name=csrfmiddlewaretoken]');
+            if (csrfToken) {
+                event.detail.headers['X-CSRFToken'] = csrfToken.value;
+            }
+        });
+    </script>
+</body>
+</html>

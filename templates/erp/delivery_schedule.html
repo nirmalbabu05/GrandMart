@@ -1,0 +1,93 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-5xl mx-auto w-full">
+            
+            <div class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-black text-gray-800 tracking-tight">Delivery Schedule</h2>
+                    <p class="text-gray-500 mt-1 text-sm">Track upcoming stock deliveries from your suppliers and vendors.</p>
+                </div>
+                <button onclick="alert('Admin Panel route to create direct PO schedules will be added in configuration updates!')" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-blue-700 transition shadow-md flex items-center">
+                    <i class="fas fa-calendar-plus mr-2"></i> Schedule Delivery
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-blue-500 bg-white/90 shadow-sm">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Expected This Week</p>
+                    <h3 class="text-2xl font-black text-gray-800">{{ expected_this_week }} Deliveries</h3>
+                </div>
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-amber-500 bg-white/90 shadow-sm">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Pending Confirmation</p>
+                    <h3 class="text-2xl font-black text-gray-800">{{ pending_confirmation }} Suppliers</h3>
+                </div>
+                <div class="glass-panel rounded-2xl p-6 border-l-4 border-l-green-500 bg-white/90 shadow-sm">
+                    <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Warehouse Capacity</p>
+                    <h3 class="text-2xl font-black text-green-600">{{ warehouse_capacity }}</h3>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-blue-500 bg-white/90 shadow-sm">
+                <h3 class="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i class="fas fa-truck-loading mr-2 text-gray-500"></i> Upcoming Supplier Deliveries
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                <th class="px-4 py-3">Schedule ID</th>
+                                <th class="px-4 py-3">Expected Date</th>
+                                <th class="px-4 py-3">Supplier Name</th>
+                                <th class="px-4 py-3">Expected Goods</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm text-gray-700">
+                            {% for schedule in schedules %}
+                            <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                                <td class="px-4 py-3 font-bold text-gray-500 text-xs">{{ schedule.delivery_id }}</td>
+                                <td class="px-4 py-3 font-black text-blue-600">{{ schedule.expected_date|date:"d M Y" }}</td>
+                                <td class="px-4 py-3 font-bold text-gray-800">
+                                    {{ schedule.supplier.name }}
+                                    <br><span class="text-[10px] text-gray-400 font-normal">Contact: {{ schedule.supplier.phone|default:"Vendor Rep" }}</span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-600 font-semibold">{{ schedule.expected_items }}</td>
+                                <td class="px-4 py-3">
+                                    {% if schedule.status == 'Arrived' %}
+                                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-[10px] font-black uppercase">Arrived</span>
+                                    {% elif schedule.status == 'Confirmed' %}
+                                        <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase">Confirmed</span>
+                                    {% else %}
+                                        <span class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-[10px] font-black uppercase">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-3 text-center">
+                                    {% if schedule.status != 'Arrived' %}
+                                    <form hx-post="{% url 'mark_delivery_arrived' schedule.id %}" hx-target="#app-content" hx-swap="innerHTML" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="text-blue-500 hover:text-blue-700 font-bold text-xs bg-blue-50 px-3 py-1.5 rounded transition">
+                                            Mark Arrived
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-xs text-gray-400 font-bold italic">Stock Received</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-10 text-gray-400 font-bold">
+                                    <i class="fas fa-calendar-times text-3xl mb-2 block text-gray-300"></i>
+                                    No real upcoming deliveries found in database.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>

@@ -1,0 +1,139 @@
+<div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+    <div class="max-w-5xl mx-auto w-full">
+        
+        <div class="flex justify-between items-end mb-8">
+            <div>
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight">Master Data & Settings</h2>
+                <p class="text-gray-500 mt-1 text-sm font-medium">Configure core enterprise profiles, tax slabs, and global billing configurations.</p>
+            </div>
+            {% if success %}
+            <div id="success-alert" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-sm flex items-center animate-fade-in transition-all">
+                <i class="fas fa-check-circle mr-2 text-xl"></i>
+                <p class="font-bold text-sm">Settings Saved Successfully!</p>
+            </div>
+            <script>
+                setTimeout(() => { document.getElementById('success-alert').style.display = 'none'; }, 3000);
+            </script>
+            {% endif %}
+        </div>
+
+        <form hx-post="{% url 'general_master' %}" hx-target="#app-content" hx-select="#app-content" hx-swap="outerHTML">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-purple-500 bg-white/80">
+                        <h3 class="text-xl font-bold text-gray-800 mb-6"><i class="fas fa-store text-purple-500 mr-2"></i> Supermarket Profile</h3>
+                        
+                        <div class="space-y-5">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Business / Store Name *</label>
+                                    <input type="text" name="store_name" value="{{ store.name|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white outline-none focus:ring-2 focus:ring-purple-400 text-sm font-bold" required>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase mb-2">GSTIN Number</label>
+                                        <input type="text" name="gst_number" value="{{ store.gst_number|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white outline-none focus:ring-2 focus:ring-purple-400 text-[11px] font-mono tracking-wider">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-600 uppercase mb-2 text-orange-600">FSSAI License No</label>
+                                        <input type="text" name="fssai_number" value="{{ store.fssai_number|default:'' }}" class="w-full p-3 rounded-lg border border-orange-200 bg-orange-50 outline-none focus:ring-2 focus:ring-orange-400 text-[11px] font-mono tracking-wider">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Contact Number</label>
+                                    <input type="text" name="store_phone" value="{{ store.phone|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white outline-none focus:ring-2 focus:ring-purple-400 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Email Address</label>
+                                    <input type="email" name="store_email" value="{{ store.email|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white outline-none focus:ring-2 focus:ring-purple-400 text-sm">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Store Address</label>
+                                <textarea name="store_address" rows="2" class="w-full p-3 rounded-lg border border-gray-300 bg-white outline-none focus:ring-2 focus:ring-purple-400 text-sm font-medium">{{ store.address|default:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-indigo-500 bg-white/80">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-print text-indigo-500 mr-2"></i> Receipt & Invoice Customization</h3>
+                        <p class="text-gray-500 text-xs mb-6">Customize the footer and policies printed on POS thermal receipts.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Receipt Footer Note</label>
+                                <input type="text" name="receipt_footer" value="{{ store.receipt_footer|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Return / Exchange Policy</label>
+                                <input type="text" name="return_policy" value="{{ store.return_policy|default:'' }}" class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-blue-500 bg-white/80">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-percent text-blue-500 mr-2"></i> Regional Settings</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-gray-400 uppercase mb-1">Financial Year</label>
+                                <div class="p-2 bg-gray-50 rounded-lg border border-gray-200 font-bold text-gray-600 flex justify-between items-center text-xs">
+                                    <span>Current Period</span>
+                                    <span class="text-blue-600">FY 2026-27</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-gray-600 uppercase mb-2">Default GST Slab (%)</label>
+                                <select name="default_gst" class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm font-bold text-gray-700">
+                                    <option value="0" {% if store.default_gst_slab == 0 %}selected{% endif %}>GST @ 0% (Exempted)</option>
+                                    <option value="5" {% if store.default_gst_slab == 5 %}selected{% endif %}>GST @ 5% (FMCG)</option>
+                                    <option value="12" {% if store.default_gst_slab == 12 %}selected{% endif %}>GST @ 12%</option>
+                                    <option value="18" {% if store.default_gst_slab == 18 %}selected{% endif %}>GST @ 18% (Standard)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-emerald-500 bg-white/80">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-credit-card text-emerald-500 mr-2"></i> Checkout Options</h3>
+                        <p class="text-[10px] text-gray-500 mb-4">Enable payment methods for POS counter.</p>
+                        
+                        <div class="space-y-3">
+                            <label class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 transition">
+                                <span class="text-sm font-bold text-gray-700"><i class="fas fa-money-bill-wave text-green-500 mr-2 w-5"></i> Cash</span>
+                                <input type="checkbox" name="cash_enabled" class="w-5 h-5 accent-green-600" {% if store.cash_enabled %}checked{% endif %}>
+                            </label>
+                            
+                            <label class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 transition">
+                                <span class="text-sm font-bold text-gray-700"><i class="fas fa-qrcode text-blue-500 mr-2 w-5"></i> UPI / QR</span>
+                                <input type="checkbox" name="upi_enabled" class="w-5 h-5 accent-blue-600" {% if store.upi_enabled %}checked{% endif %}>
+                            </label>
+                            
+                            <label class="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm cursor-pointer hover:bg-gray-50 transition">
+                                <span class="text-sm font-bold text-gray-700"><i class="fas fa-credit-card text-indigo-500 mr-2 w-5"></i> Card Swipe</span>
+                                <input type="checkbox" name="card_enabled" class="w-5 h-5 accent-indigo-600" {% if store.card_enabled %}checked{% endif %}>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4">
+                        <button type="submit" class="w-full bg-gradient-to-r from-gray-800 to-black text-white py-4 rounded-xl font-black text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 flex items-center justify-center group">
+                            <i class="fas fa-save mr-2 group-hover:scale-110 transition"></i> UPDATE MASTER DATA
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+
+    </div>
+</div>

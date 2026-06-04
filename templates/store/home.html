@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrandMart - Premium Daily Essentials</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; scroll-behavior: smooth; }
+        
+        body { 
+            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .product-card { transition: all 0.25s ease; background: #ffffff; border: 1px solid #f1f5f9; }
+        .product-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08), 0 4px 10px -4px rgba(0, 0, 0, 0.04); border-color: #e2e8f0; }
+        .product-img-wrapper { overflow: hidden; }
+        .product-img { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .product-card:hover .product-img { transform: scale(1.08); }
+        .btn-add { transition: all 0.2s ease; }
+        .btn-add:active { transform: scale(0.95); }
+
+        @keyframes pulse-ring { 
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } 
+        }
+        .mic-listening { animation: pulse-ring 1.5s infinite; color: #10b981 !important; }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .toast-show { animation: slideUpFade 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <nav class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex-shrink-0 flex items-center cursor-pointer group" onclick="window.location.href='/'">
+                    <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center mr-3 shadow-md group-hover:bg-emerald-700 transition-colors">
+                        <i class="fas fa-leaf text-white text-xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-black tracking-tight text-slate-900">Grand<span class="text-emerald-600">Mart</span></h1>
+                </div>
+                
+                <div class="hidden md:flex flex-1 max-w-2xl mx-12">
+                    <form action="{% url 'store_home' %}" method="GET" id="searchForm" class="relative w-full flex items-center">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <i class="fas fa-search text-slate-400"></i>
+                        </div>
+                        <input type="text" id="searchInput" name="search" value="{{ search_query|default:'' }}" placeholder="Search for fresh groceries, daily needs..." class="w-full bg-slate-100 text-slate-800 rounded-xl pl-11 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 border border-transparent focus:bg-white transition-all font-medium placeholder-slate-400">
+                        <button type="button" onclick="startVoiceSearch()" id="micBtn" class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer" title="Search by Voice">
+                            <i class="fas fa-microphone text-lg"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="flex items-center space-x-6">
+                    <button onclick="toggleCart()" class="relative flex items-center justify-center w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-emerald-600 transition-colors">
+                        <i class="fas fa-shopping-cart text-lg"></i>
+                        <span class="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm border-2 border-white transition-transform" id="cartCount">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="md:hidden px-4 py-3 bg-white border-b border-slate-200 sticky top-20 z-30">
+        <form action="{% url 'store_home' %}" method="GET" id="mobileSearchForm" class="relative flex items-center">
+            <input type="text" id="mobileSearchInput" name="search" value="{{ search_query|default:'' }}" placeholder="Search products..." class="w-full bg-slate-100 text-slate-800 rounded-lg pl-10 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium border border-transparent">
+            <i class="fas fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm pointer-events-none"></i>
+            <button type="button" onclick="startVoiceSearch('mobile')" id="mobileMicBtn" class="absolute right-3.5 top-3 text-slate-400 hover:text-emerald-600">
+                <i class="fas fa-microphone"></i>
+            </button>
+        </form>
+    </div>
+
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col gap-6">
+        
+        {% if not search_query and not active_category %}
+        <div class="relative w-full rounded-3xl overflow-hidden bg-slate-900 shadow-xl flex items-center justify-between">
+            <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            <div class="relative z-10 p-8 md:p-12 lg:p-16 max-w-2xl">
+                <div class="inline-flex items-center px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs font-bold uppercase tracking-widest mb-6">
+                    <i class="fas fa-clock mr-2"></i> Superfast Delivery
+                </div>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight mb-4 tracking-tight">
+                    Groceries delivered <br><span class="text-emerald-400">in minutes.</span>
+                </h2>
+                <p class="text-slate-300 text-base md:text-lg font-medium max-w-md">Quality fresh produce and daily essentials, brought directly to your doorstep with zero hassle.</p>
+            </div>
+            <div class="hidden lg:flex relative z-10 w-72 h-72 items-center justify-center mr-16">
+                <div class="absolute inset-0 bg-emerald-500 rounded-full blur-[100px] opacity-30"></div>
+                <div class="w-48 h-48 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center transform rotate-6 shadow-2xl">
+                    <i class="fas fa-shopping-basket text-7xl text-white opacity-90"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6 mt-2">
+            <i class="fas fa-bolt absolute -right-10 -top-10 text-9xl text-white opacity-10"></i>
+            <div class="flex items-center gap-5 relative z-10 w-full md:w-auto">
+                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shrink-0 shadow-inner">
+                    <i class="fas fa-fire text-3xl text-yellow-300"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-black tracking-tight drop-shadow-sm">Deal of the Day</h3>
+                    <p class="text-sm font-medium text-rose-50 mt-1">Grab top products before the timer runs out!</p>
+                </div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-md border border-white/20 px-6 py-4 rounded-2xl flex items-center gap-4 relative z-10 shadow-inner w-full md:w-auto justify-center">
+                <i class="fas fa-stopwatch text-2xl animate-pulse"></i>
+                <div id="flashTimer" class="text-3xl font-black tracking-widest font-mono drop-shadow-md">00:00:00</div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="w-full relative mt-2">
+            <div class="flex overflow-x-auto hide-scroll space-x-3 py-2 items-center">
+                <a href="{% url 'store_home' %}" class="shrink-0 px-5 py-2.5 rounded-full font-bold text-sm transition-colors border {% if not active_category %}bg-slate-900 text-white border-slate-900 shadow-md{% else %}bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50{% endif %}">
+                    All Items
+                </a>
+                {% for cat in categories %}
+                <a href="?category={{ cat.id }}" class="shrink-0 px-5 py-2.5 rounded-full font-bold text-sm transition-colors border {% if active_category == cat.id %}bg-slate-900 text-white border-slate-900 shadow-md{% else %}bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50{% endif %}">
+                    {{ cat.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="w-full pb-10">
+            <div class="mb-6 flex items-center justify-between">
+                <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+                    {% if search_query %}Results for <span class="text-emerald-600">"{{ search_query }}"</span>
+                    {% elif active_category %}Category Items
+                    {% else %}Trending Now{% endif %}
+                </h2>
+                <span class="text-xs font-bold text-slate-500 bg-slate-200/50 px-3 py-1 rounded-md">{{ products|length }} items</span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                {% for p in products %}
+                <div class="product-card rounded-2xl p-4 flex flex-col relative group {% if p.stock_quantity <= 0 %}opacity-60 grayscale-[30%] pointer-events-none{% endif %}">
+                    
+                    {% if p.stock_quantity <= 0 %}
+                    <div class="absolute top-3 left-3 bg-rose-100 text-rose-600 text-[10px] font-black px-2.5 py-1 rounded-md z-20">OUT OF STOCK</div>
+                    {% elif p.mrp_price > p.selling_price %}
+                    <div class="absolute top-3 left-3 bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-md z-20 shadow-sm">
+                        {{ p.mrp_price|add:"-"|add:p.selling_price|floatformat:0 }}₹ OFF
+                    </div>
+                    {% endif %}
+
+                    <div class="aspect-square w-full relative mb-4 flex items-center justify-center product-img-wrapper rounded-xl bg-slate-50/50">
+                        {% if p.image_url %}
+                        <img src="{{ p.image_url }}" alt="{{ p.name }}" class="product-img w-4/5 h-4/5 object-contain mix-blend-multiply">
+                        {% elif p.image %}
+                        <img src="{{ p.image.url }}" alt="{{ p.name }}" class="product-img w-4/5 h-4/5 object-contain mix-blend-multiply">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <i class="fas fa-image text-4xl text-slate-200"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col">
+                        <h3 class="text-sm font-bold text-slate-800 leading-snug line-clamp-2 mb-1 group-hover:text-emerald-600 transition-colors">{{ p.name }}</h3>
+                        <p class="text-xs text-slate-500 font-medium mb-3">{{ p.pack_size }}</p>
+                        
+                        <div class="mt-auto flex items-center justify-between pt-2">
+                            <div>
+                                {% if p.mrp_price > p.selling_price %}
+                                <p class="text-[10px] text-slate-400 line-through font-bold leading-none mb-0.5">₹{{ p.mrp_price }}</p>
+                                {% endif %}
+                                <p class="font-black text-slate-900 text-lg leading-none">₹{{ p.selling_price }}</p>
+                            </div>
+                            
+                            {% if p.stock_quantity <= 0 %}
+                            <button class="bg-slate-100 text-slate-400 w-9 h-9 rounded-lg flex items-center justify-center cursor-not-allowed border border-slate-200">
+                                <i class="fas fa-ban text-sm"></i>
+                            </button>
+                            {% else %}
+                            <button onclick="addWebCart('{{ p.id }}', '{{ p.name|escapejs }}', '{{ p.selling_price }}', '{% if p.image_url %}{{ p.image_url }}{% elif p.image %}{{ p.image.url }}{% else %}none{% endif %}', '{{ p.category.name|escapejs }}')" class="btn-add bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white border border-emerald-100 w-9 h-9 rounded-lg flex items-center justify-center z-20 shadow-sm">
+                                <i class="fas fa-plus text-sm"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-slate-100 shadow-sm">
+                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-sm">
+                        <i class="fas fa-search text-3xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800 mb-1">No products found</h3>
+                    <p class="text-slate-500 font-medium text-sm">We couldn't find what you're looking for.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 py-8 border-t border-slate-200">
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
+                    <i class="fas fa-shipping-fast text-emerald-600 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-800 mb-1">Superfast Delivery</h4>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed">Get your orders delivered to your doorstep at lightning speed.</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center shrink-0">
+                    <i class="fas fa-leaf text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-800 mb-1">100% Fresh Quality</h4>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed">We guarantee the freshest produce and best quality products.</p>
+                </div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm flex items-start gap-4">
+                <div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center shrink-0">
+                    <i class="fas fa-shield-alt text-purple-600 text-xl"></i>
+                </div>
+                <div>
+                    <h4 class="font-black text-slate-800 mb-1">Secure Payments</h4>
+                    <p class="text-sm text-slate-500 font-medium leading-relaxed">Your transactions are safe with our 256-bit encrypted gateways.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-300 pt-16 pb-8 border-t-[6px] border-emerald-500 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+                <div class="space-y-4">
+                    <div class="flex items-center mb-6">
+                        <div class="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center mr-2">
+                            <i class="fas fa-leaf text-white text-sm"></i>
+                        </div>
+                        <h2 class="text-2xl font-black tracking-tight text-white">Grand<span class="text-emerald-500">Mart</span></h2>
+                    </div>
+                    <p class="text-sm text-slate-400 font-medium leading-relaxed">Your ultimate destination for premium quality groceries, daily essentials, and fresh produce delivered right to your door.</p>
+                </div>
+                <div>
+                    <h4 class="text-white font-black uppercase tracking-wider text-sm mb-6">Quick Links</h4>
+                    <ul class="space-y-3 text-sm font-medium">
+                        <li><a href="#" class="hover:text-emerald-400 transition-colors">About Us</a></li>
+                        <li><a href="#" class="hover:text-emerald-400 transition-colors">Shop Categories</a></li>
+                        <li><a href="#" class="hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-white font-black uppercase tracking-wider text-sm mb-6">Contact Us</h4>
+                    <ul class="space-y-4 text-sm font-medium">
+                        <li class="flex items-start">
+                            <i class="fas fa-map-marker-alt text-emerald-500 mt-1 mr-3 text-lg"></i>
+                            <span>123, GrandMart Corporate Tower,<br>Main High Road, City Hub - 600001</span>
+                        </li>
+                        <li class="flex items-center">
+                            <i class="fas fa-phone-alt text-emerald-500 mr-3 text-lg"></i>
+                            <span>+91 98765 43210</span>
+                        </li>
+                    </ul>
+                </div>
+                <div class="h-full">
+                    <h4 class="text-white font-black uppercase tracking-wider text-sm mb-6">Find Us</h4>
+                    <div class="w-full h-40 bg-slate-800 rounded-xl overflow-hidden border border-slate-700 shadow-inner">
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.057375276332!2d-122.41941548468205!3d37.77492997975903!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085809c6c8f4459%3A0xb10ed6d9b5050f14!2sSan+Francisco%2C+CA!5e0!3m2!1sen!2sin!4v1500000000000" width="100%" height="100%" style="border:0; filter: contrast(1.1) brightness(0.9);" allowfullscreen="" loading="lazy"></iframe>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-xs font-medium text-slate-500">© 2026 GrandMart Supermarkets. All rights reserved.</p>
+                <div class="flex items-center space-x-3 text-xl text-slate-600">
+                    <i class="fab fa-cc-visa"></i> <i class="fab fa-cc-mastercard"></i> <i class="fab fa-google-pay"></i>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="toastContainer" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+    <div id="cartOverlay" onclick="toggleCart()" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+    
+    <div id="sideCart" class="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-slate-50 z-[90] transform translate-x-full transition-transform duration-400 cubic-bezier(0.16, 1, 0.3, 1) shadow-2xl flex flex-col border-l border-slate-200">
+        
+        <div class="bg-white px-6 py-5 border-b border-slate-200 flex justify-between items-center shrink-0">
+            <h2 class="text-xl font-black text-slate-900 tracking-tight">Your Cart</h2>
+            <div class="flex items-center gap-4">
+                <button onclick="clearCart()" class="text-xs font-bold text-rose-500 hover:text-rose-700 transition-colors">Clear All</button>
+                <button onclick="toggleCart()" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full flex items-center justify-center transition">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="sideCartItems" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+        <div id="aiRecommendations" class="bg-slate-100/50 px-6 py-4 border-y border-slate-200 hidden shrink-0">
+            <h4 class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 flex items-center">
+                <i class="fas fa-magic mr-2"></i> Frequently Bought Together
+            </h4>
+            <div id="recommendationList" class="flex gap-3 overflow-x-auto hide-scroll pb-2"></div>
+        </div>
+
+        <div class="bg-white border-t border-slate-200 p-6 shrink-0 flex flex-col gap-3">
+            <div class="flex justify-between items-end mb-2">
+                <span class="text-sm font-bold text-slate-500">Total Amount</span>
+                <span id="sideCartTotal" class="text-2xl font-black text-slate-900">₹0.00</span>
+            </div>
+            
+            <a href="{% url 'checkout' %}" id="checkoutBtn" class="w-full flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white p-3.5 rounded-xl font-bold text-lg transition shadow-sm">
+                Proceed to Checkout <i class="fas fa-arrow-right ml-2 text-sm"></i>
+            </a>
+            
+            <button onclick="orderViaWhatsApp()" id="whatsappBtn" class="w-full flex items-center justify-center bg-[#25D366] hover:bg-[#128C7E] text-white p-3.5 rounded-xl font-bold text-lg transition shadow-sm">
+                <i class="fab fa-whatsapp text-xl mr-2"></i> Order via WhatsApp
+            </button>
+        </div>
+    </div>
+
+    <script type="application/json" id="products-data">
+        [
+            {% for p in products %}
+            {
+                "id": "{{ p.id }}",
+                "name": "{{ p.name|escapejs }}",
+                "price": {{ p.selling_price|default:0 }},
+                "image": "{% if p.image_url %}{{ p.image_url|escapejs }}{% elif p.image %}{{ p.image.url|escapejs }}{% else %}none{% endif %}",
+                "category": "{% if p.category %}{{ p.category.name|escapejs }}{% else %}General{% endif %}"
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ]
+    </script>
+
+    <script>
+        // 1. Loading data gracefully without VS Code screaming
+        const allProducts = JSON.parse(document.getElementById('products-data').textContent);
+        
+        let webCart = JSON.parse(localStorage.getItem('grandmart_cart')) || {};
+        
+        // --- CART SYSTEM ---
+        function updateCartSystem() {
+            let count = 0; let total = 0; let cartHtml = '';
+            
+            for(let id in webCart) {
+                let item = webCart[id]; count += item.qty;
+                let itemTotal = item.price * item.qty; total += itemTotal;
+                
+                let imgTag = item.image !== 'none' 
+                    ? `<img src="${item.image}" class="w-full h-full object-contain p-1 mix-blend-multiply">` 
+                    : `<i class="fas fa-image text-slate-300 text-xl"></i>`;
+
+                cartHtml += `
+                <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+                    <div class="w-14 h-14 bg-slate-50 rounded-lg flex items-center justify-center shrink-0 border border-slate-100">
+                        ${imgTag}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-bold text-slate-800 text-sm line-clamp-1">${item.name}</h4>
+                        <div class="font-black text-emerald-600 text-sm mt-0.5">₹${itemTotal.toFixed(2)}</div>
+                    </div>
+                    <div class="flex items-center bg-white border border-slate-200 rounded-lg shrink-0">
+                        <button onclick="changeQty('${id}', -1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-rose-500 transition font-black text-xs"><i class="fas fa-minus"></i></button>
+                        <span class="w-6 h-8 flex items-center justify-center font-bold text-xs text-slate-800 bg-slate-50">${item.qty}</span>
+                        <button onclick="changeQty('${id}', 1)" class="w-8 h-8 flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-emerald-500 transition font-black text-xs"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>`;
+            }
+            
+            if(count === 0) {
+                cartHtml = `<div class="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 pt-10"><div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200"><i class="fas fa-shopping-basket text-3xl text-slate-300"></i></div><p class="font-bold text-slate-500 text-sm">Your cart is empty.</p></div>`;
+                document.getElementById('checkoutBtn').style.display = 'none';
+                document.getElementById('whatsappBtn').style.display = 'none';
+            } else {
+                document.getElementById('checkoutBtn').style.display = 'flex';
+                document.getElementById('whatsappBtn').style.display = 'flex';
+            }
+
+            document.getElementById('sideCartItems').innerHTML = cartHtml;
+            document.getElementById('sideCartTotal').innerText = `₹${total.toFixed(2)}`;
+            
+            const badge = document.getElementById('cartCount');
+            badge.innerText = count;
+            badge.style.transform = 'scale(1.2)';
+            setTimeout(() => badge.style.transform = 'scale(1)', 200);
+            
+            localStorage.setItem('grandmart_cart', JSON.stringify(webCart));
+            generateAIRecommendations();
+        }
+
+        // --- 🧠 AI RECOMMENDATION ENGINE ---
+        function generateAIRecommendations() {
+            const aiSection = document.getElementById('aiRecommendations');
+            const recList = document.getElementById('recommendationList');
+            const cartKeys = Object.keys(webCart);
+            
+            if(cartKeys.length === 0) { aiSection.classList.add('hidden'); return; }
+
+            let cartCategories = [...new Set(cartKeys.map(id => webCart[id].category))];
+            let suggestedProducts = allProducts.filter(p => !webCart[p.id] && cartCategories.includes(p.category));
+            
+            // Pick top 3 randomly
+            suggestedProducts = suggestedProducts.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+            if(suggestedProducts.length === 0) { aiSection.classList.add('hidden'); return; }
+
+            let recHtml = '';
+            suggestedProducts.forEach(prod => {
+                let imgTag = prod.image !== 'none' ? `<img src="${prod.image}" class="w-10 h-10 object-contain mx-auto mb-2 mix-blend-multiply group-hover:scale-110 transition-transform">` : `<i class="fas fa-box text-slate-300 text-2xl mb-2"></i>`;
+                let safeName = prod.name.replace(/'/g, "\\'");
+                
+                recHtml += `
+                <div class="min-w-[130px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm shrink-0 flex flex-col group hover:border-emerald-200 transition-colors">
+                    ${imgTag}
+                    <h5 class="text-[11px] font-bold text-slate-800 line-clamp-1 mb-1" title="${prod.name}">${prod.name}</h5>
+                    <div class="mt-auto flex items-center justify-between pt-1 border-t border-slate-50">
+                        <span class="font-black text-slate-900 text-xs">₹${prod.price}</span>
+                        <button onclick="addWebCart('${prod.id}', '${safeName}', '${prod.price}', '${prod.image}', '${prod.category}')" class="w-6 h-6 bg-slate-100 hover:bg-emerald-500 hover:text-white rounded-md flex items-center justify-center text-slate-600 transition-colors">
+                            <i class="fas fa-plus text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>`;
+            });
+
+            recList.innerHTML = recHtml;
+            aiSection.classList.remove('hidden');
+        }
+
+        // --- CORE CART FUNCTIONS ---
+        function addWebCart(id, name, price, imgUrl, category = 'General') {
+            let numPrice = parseFloat(price) || 0; 
+            if(webCart[id]) { webCart[id].qty += 1; } 
+            else { webCart[id] = { name: name, price: numPrice, qty: 1, image: imgUrl, category: category }; }
+            updateCartSystem(); showToast(`${name} added!`);
+        }
+
+        function changeQty(id, change) {
+            if(webCart[id]) { webCart[id].qty += change; if(webCart[id].qty <= 0) { delete webCart[id]; } updateCartSystem(); }
+        }
+
+        function clearCart() { if(confirm("Are you sure you want to clear your cart?")) { webCart = {}; updateCartSystem(); } }
+
+        function toggleCart() {
+            const panel = document.getElementById('sideCart'); const overlay = document.getElementById('cartOverlay');
+            if (panel.classList.contains('translate-x-full')) {
+                panel.classList.remove('translate-x-full'); overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-100', 'pointer-events-auto'); document.body.style.overflow = 'hidden';
+            } else {
+                panel.classList.add('translate-x-full'); overlay.classList.remove('opacity-100', 'pointer-events-auto');
+                overlay.classList.add('opacity-0', 'pointer-events-none'); document.body.style.overflow = 'auto';
+            }
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer'); const toast = document.createElement('div');
+            toast.className = 'toast-show bg-slate-800 text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 text-sm font-medium pointer-events-auto';
+            toast.innerHTML = `<i class="fas fa-check-circle text-emerald-400"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(10px)'; toast.style.transition = 'all 0.3s ease'; setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        // --- 🎙️ AI VOICE SEARCH LOGIC ---
+        function startVoiceSearch(type = 'desktop') {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) { alert("Your browser doesn't support Voice Search. Please use Chrome."); return; }
+            
+            const recognition = new SpeechRecognition();
+            const micBtn = type === 'desktop' ? document.getElementById('micBtn') : document.getElementById('mobileMicBtn');
+            const searchInput = type === 'desktop' ? document.getElementById('searchInput') : document.getElementById('mobileSearchInput');
+            const searchForm = type === 'desktop' ? document.getElementById('searchForm') : document.getElementById('mobileSearchForm');
+
+            recognition.onstart = function() { micBtn.classList.add('mic-listening'); searchInput.placeholder = "Listening... Speak now 🎙️"; };
+            recognition.onsuccess = function(event) {
+                const transcript = event.results[0][0].transcript;
+                searchInput.value = transcript; micBtn.classList.remove('mic-listening'); searchForm.submit();
+            };
+            recognition.onerror = function() { micBtn.classList.remove('mic-listening'); searchInput.placeholder = "Search for fresh groceries..."; showToast("Voice not recognized."); };
+            recognition.onend = function() { micBtn.classList.remove('mic-listening'); };
+            recognition.start();
+        }
+
+        // --- ⏳ FLASH DEAL TIMER LOGIC ---
+        function startFlashTimer() {
+            const timerEl = document.getElementById('flashTimer'); if(!timerEl) return;
+            const now = new Date(); const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+            
+            setInterval(() => {
+                const current = new Date(); const diff = endOfDay - current;
+                if(diff <= 0) { timerEl.innerText = "00:00:00"; return; }
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+                timerEl.innerText = `${h}:${m}:${s}`;
+            }, 1000);
+        }
+
+        // --- 📲 WHATSAPP ORDER LOGIC ---
+        function orderViaWhatsApp() {
+            let total = 0; let text = "👋 *Hello GrandMart! I would like to place an order:*\n\n"; let index = 1;
+            for(let id in webCart) {
+                let item = webCart[id]; let itemTotal = item.price * item.qty; total += itemTotal;
+                text += `${index}. ${item.name} (x${item.qty}) - ₹${itemTotal.toFixed(2)}\n`; index++;
+            }
+            text += `\n🛒 *Grand Total:* ₹${total.toFixed(2)}\n\nPlease confirm my order.`;
+            const shopPhone = "919876543210"; // CHANGE NUMBER HERE
+            window.open(`https://wa.me/${shopPhone}?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        // Init
+        updateCartSystem();
+        startFlashTimer();
+    </script>
+</body>
+</html>

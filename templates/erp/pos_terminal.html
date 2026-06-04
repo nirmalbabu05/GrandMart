@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Terminal - GrandMart</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Hide scrollbars for clean POS look */
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen overflow-hidden flex flex-col font-sans">
+
+    <iframe id="thermalPrinter" class="hidden"></iframe>
+
+    <nav class="h-16 bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex justify-between items-center z-10 shrink-0">
+        <div class="flex items-center">
+            <i class="fas fa-store text-blue-600 text-2xl mr-3"></i>
+            <h1 class="text-xl font-black text-gray-800 tracking-tight">GrandMart <span class="text-blue-600 font-normal">POS</span></h1>
+        </div>
+        
+        <div class="flex items-center bg-gray-50 px-4 py-1.5 rounded-lg border border-gray-200 mr-auto ml-10">
+            <span id="scannerIndicator" class="text-sm font-bold text-gray-400 transition-colors duration-300">
+                <i class="fas fa-barcode mr-1"></i> Scanner Ready
+            </span>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-bold text-gray-600 bg-gray-100 px-3 py-1 rounded-md"><i class="fas fa-keyboard mr-1"></i> F2: Search | F9: Bill | Esc: Clear</span>
+            <span class="text-sm font-bold text-gray-600"><i class="fas fa-user-circle mr-1"></i> Cashier: {{ request.user.username }}</span>
+            <a href="{% url 'erp_dashboard' %}" class="bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-700 px-4 py-1.5 rounded-lg text-sm font-bold transition">
+                <i class="fas fa-sign-out-alt mr-1"></i> Exit POS
+            </a>
+        </div>
+    </nav>
+
+    <div class="flex-1 flex overflow-hidden">
+        
+        <div class="w-full lg:w-2/3 flex flex-col bg-gray-50 h-full border-r border-gray-200 relative">
+            
+            <div class="p-4 bg-white border-b border-gray-200 flex space-x-3 shrink-0">
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    <input type="text" id="searchInput" onkeyup="filterProducts()" placeholder="Search products by name or barcode (Press F2)..." class="w-full pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                </div>
+                <select id="categoryFilter" onchange="filterProducts()" class="bg-gray-100 border-none rounded-xl px-4 py-2 font-bold text-gray-600 focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="ALL">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.name }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 min-h-0 hide-scroll">
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id="productGrid">
+                    {% for p in products %}
+                    <div class="product-card bg-white rounded-xl border {% if p.stock_quantity <= 0 %}border-red-200 opacity-70{% else %}border-gray-200 hover:border-blue-300 hover:shadow-md cursor-pointer{% endif %} p-3 flex flex-col transition relative overflow-hidden" 
+                         data-name="{{ p.name|lower }}" 
+                         data-category="{{ p.category.name }}"
+                         data-barcode="{{ p.barcode|default:'' }}"
+                         id="product-card-{{ p.id }}"
+                         {% if p.stock_quantity > 0 %} onclick="addToCart('{{ p.id }}', '{{ p.name|escapejs }}', {{ p.selling_price }}, {{ p.stock_quantity }})" {% endif %}>
+                        
+                        {% if p.stock_quantity <= 0 %}
+                            <div class="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg z-10">Out of Stock</div>
+                        {% else %}
+                            <div class="absolute top-0 right-0 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-bl-lg z-10">{{ p.stock_quantity }} in stock</div>
+                        {% endif %}
+
+                        <div class="h-16 flex items-center justify-center text-gray-300 mb-2 mt-3">
+                            <i class="fas fa-box text-3xl"></i>
+                        </div>
+                        <h3 class="text-xs font-bold text-gray-800 leading-tight mb-1 line-clamp-2">{{ p.name }}</h3>
+                        <p class="text-[10px] text-gray-500 mb-2">{{ p.pack_size }}</p>
+                        
+                        <div class="mt-auto flex justify-between items-end">
+                            <span class="font-black text-blue-600 text-sm">₹{{ p.selling_price }}</span>
+                            {% if p.stock_quantity <= 0 %}
+                                <button class="bg-gray-200 text-gray-400 w-7 h-7 rounded-full flex items-center justify-center cursor-not-allowed" disabled>
+                                    <i class="fas fa-ban"></i>
+                                </button>
+                            {% else %}
+                                <button class="bg-blue-50 text-blue-600 w-7 h-7 rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden lg:flex w-1/3 bg-white flex-col h-full shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.05)] z-20 relative">
+            
+            <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
+                <h2 class="text-lg font-black text-gray-800"><i class="fas fa-shopping-cart text-blue-600 mr-2"></i>Current Bill</h2>
+                <button onclick="clearCart()" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded transition">Clear All (Esc)</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 bg-white min-h-0 hide-scroll" id="cartContainer">
+                <div class="h-full flex flex-col items-center justify-center text-gray-300 space-y-3" id="emptyCartMsg">
+                    <i class="fas fa-cart-arrow-down text-5xl"></i>
+                    <p class="font-bold text-sm">Cart is empty</p>
+                    <p class="text-xs text-gray-400">Scan items to add</p>
+                </div>
+            </div>
+
+            <div class="p-5 bg-gray-50 border-t border-gray-200 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] shrink-0 w-full">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-gray-500 font-bold text-sm">Subtotal</span>
+                    <span class="text-gray-800 font-bold" id="cartSubtotal">₹0.00</span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-gray-500 font-bold text-sm">Tax (Included)</span>
+                    <span class="text-gray-500 font-bold">₹0.00</span>
+                </div>
+                <div class="flex justify-between items-center mb-6 pt-3 border-t border-gray-200 border-dashed">
+                    <span class="text-gray-800 font-black text-lg">Grand Total</span>
+                    <span class="text-blue-600 font-black text-2xl" id="cartTotal">₹0.00</span>
+                </div>
+                
+                <button id="checkoutBtn" onclick="processCheckout()" class="w-full bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl shadow-lg shadow-green-500/30 transition transform hover:-translate-y-1 flex justify-center items-center opacity-50 cursor-not-allowed" disabled>
+                    <i class="fas fa-print mr-2 text-xl"></i> GENERATE BILL (F9)
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+    <script>
+        let cart = {};
+
+        // 🌟 1. AUTO BARCODE SCANNER LOGIC 🌟
+        let barcodeBuffer = "";
+        let barcodeTimeout;
+
+        document.addEventListener('keypress', function(e) {
+            // Ignore if user is manually typing inside the search box (unless it's 'Enter' from the scanner)
+            if (e.target.tagName === 'INPUT' && e.key !== 'Enter') return;
+
+            // Barcode scanners usually send an 'Enter' key at the end of the scan
+            if (e.key === 'Enter' && barcodeBuffer.length > 2) {
+                processScannedBarcode(barcodeBuffer);
+                barcodeBuffer = "";
+                e.preventDefault();
+                return;
+            }
+
+            if (e.key !== 'Enter') {
+                barcodeBuffer += e.key;
+                clearTimeout(barcodeTimeout);
+                // Scanners type very fast. If gap is > 50ms, it's likely a human typing, so reset buffer.
+                barcodeTimeout = setTimeout(() => { barcodeBuffer = ""; }, 50); 
+            }
+        });
+
+        function processScannedBarcode(code) {
+            const cards = document.querySelectorAll('.product-card');
+            let found = false;
+            
+            cards.forEach(card => {
+                if (card.getAttribute('data-barcode') === code) {
+                    // Trigger the UI click event of that product
+                    card.click();
+                    found = true;
+                    
+                    // Flash the UI Indicator
+                    const ind = document.getElementById('scannerIndicator');
+                    ind.innerHTML = `<i class="fas fa-check-circle"></i> Added: ${code}`;
+                    ind.classList.remove('text-gray-400');
+                    ind.classList.add('text-green-500', 'bg-green-50');
+                    
+                    // Add a tiny beep sound
+                    let beep = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(100).join("123"));
+                    beep.play().catch(e => {});
+
+                    setTimeout(() => {
+                        ind.innerHTML = '<i class="fas fa-barcode mr-1"></i> Scanner Ready';
+                        ind.classList.remove('text-green-500', 'bg-green-50');
+                        ind.classList.add('text-gray-400');
+                    }, 1000);
+                }
+            });
+
+            if(!found) {
+                alert(`Barcode '${code}' not found in system!`);
+                barcodeBuffer = "";
+            }
+        }
+
+
+        // 🌟 2. KEYBOARD SHORTCUTS 🌟
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F9') {
+                e.preventDefault();
+                if(!document.getElementById('checkoutBtn').disabled) processCheckout();
+            }
+            else if (e.key === 'F2') {
+                e.preventDefault();
+                document.getElementById('searchInput').focus();
+            }
+            else if (e.key === 'Escape') {
+                e.preventDefault();
+                clearCart();
+            }
+        });
+
+
+        // 🌟 3. CART & LOGIC 🌟
+        function addToCart(id, name, price, maxStock) {
+            if (maxStock <= 0) { alert("This product is out of stock!"); return; }
+            if (cart[id]) {
+                if (cart[id].qty >= maxStock) { alert(`Bro! Only ${maxStock} items left in stock.`); return; }
+                cart[id].qty += 1;
+            } else {
+                cart[id] = { name: name, price: price, qty: 1, stock: maxStock };
+            }
+            
+            // Visual pop effect on the card
+            const cardEl = document.getElementById(`product-card-${id}`);
+            if(cardEl) {
+                cardEl.classList.add('scale-95', 'ring-2', 'ring-blue-500');
+                setTimeout(() => cardEl.classList.remove('scale-95', 'ring-2', 'ring-blue-500'), 150);
+            }
+            
+            updateCartUI();
+        }
+
+        function updateQty(id, change) {
+            if (cart[id]) {
+                let newQty = cart[id].qty + change;
+                if (newQty > cart[id].stock) { alert(`Only ${cart[id].stock} items available!`); return; }
+                if (newQty <= 0) { delete cart[id]; } else { cart[id].qty = newQty; }
+                updateCartUI();
+            }
+        }
+
+        function clearCart() { cart = {}; updateCartUI(); }
+
+        function updateCartUI() {
+            const container = document.getElementById('cartContainer');
+            const subtotalEl = document.getElementById('cartSubtotal');
+            const totalEl = document.getElementById('cartTotal');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+
+            let total = 0; let cartHTML = ''; let itemCount = 0;
+
+            for (let id in cart) {
+                itemCount++;
+                let item = cart[id];
+                let itemTotal = item.price * item.qty;
+                total += itemTotal;
+
+                cartHTML += `
+                <div class="flex justify-between items-center mb-3 p-3 bg-gray-50 border border-gray-100 rounded-lg shadow-sm">
+                    <div class="flex-1 pr-2">
+                        <h4 class="text-sm font-bold text-gray-800 line-clamp-1">${item.name}</h4>
+                        <span class="text-xs text-gray-500 font-bold">₹${item.price} / unit</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex items-center bg-white border border-gray-200 rounded-md overflow-hidden shadow-sm">
+                            <button onclick="updateQty('${id}', -1)" class="w-8 h-8 flex items-center justify-center text-red-500 hover:bg-red-50 transition"><i class="fas fa-minus text-[10px]"></i></button>
+                            <span class="w-8 text-center font-bold text-sm text-gray-800 select-none">${item.qty}</span>
+                            <button onclick="updateQty('${id}', 1)" class="w-8 h-8 flex items-center justify-center text-green-500 hover:bg-green-50 transition"><i class="fas fa-plus text-[10px]"></i></button>
+                        </div>
+                        <div class="w-16 text-right">
+                            <span class="font-black text-blue-600 text-sm">₹${itemTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            if (itemCount === 0) {
+                container.innerHTML = `
+                <div class="h-full flex flex-col items-center justify-center text-gray-300 space-y-3 transition-all">
+                    <i class="fas fa-cart-arrow-down text-5xl"></i>
+                    <p class="font-bold text-sm">Cart is empty</p>
+                    <p class="text-xs text-gray-400">Scan items to add</p>
+                </div>`;
+                checkoutBtn.disabled = true;
+                checkoutBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                container.innerHTML = cartHTML;
+                checkoutBtn.disabled = false;
+                checkoutBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+
+            subtotalEl.innerText = `₹${total.toFixed(2)}`;
+            totalEl.innerText = `₹${total.toFixed(2)}`;
+        }
+
+
+        // 🌟 4. THERMAL RECEIPT AUTO-PRINT (NO RELOAD FIX) 🌟
+        function printThermalReceipt(cartData, grandTotal, invoiceNo) {
+            let printFrame = document.getElementById('thermalPrinter');
+            let doc = printFrame.contentWindow.document;
+            doc.open();
+            
+            // Raw HTML optimized for 3-inch (80mm) POS Thermal Printers
+            let html = `
+                <html><head><style>
+                    body { font-family: 'Courier New', Courier, monospace; width: 75mm; margin: 0 auto; padding: 10px 0; font-size: 13px; color: #000; }
+                    .center { text-align: center; }
+                    .bold { font-weight: bold; }
+                    .line { border-bottom: 1px dashed #000; margin: 6px 0; }
+                    table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+                    td { padding: 3px 0; vertical-align: top; }
+                    .right { text-align: right; }
+                    .header { font-size: 18px; font-weight: bold; margin-bottom: 5px; }
+                </style></head><body>
+                <div class="center header">GRANDMART</div>
+                <div class="center">123, Main Road, City</div>
+                <div class="center">Ph: +91 9876543210</div>
+                <div class="line"></div>
+                <div>Bill No : <span class="bold">${invoiceNo}</span></div>
+                <div>Date    : ${new Date().toLocaleString()}</div>
+                <div>Cashier : {{ request.user.username|default:"Admin" }}</div>
+                <div class="line"></div>
+                <table>
+                    <tr><td class="bold">Item</td><td class="bold center" style="width:30px;">Qty</td><td class="bold right" style="width:50px;">Amt</td></tr>
+            `;
+            
+            for(let id in cartData) {
+                let item = cartData[id];
+                html += `<tr><td>${item.name.substring(0,14)}</td><td class="center">${item.qty}</td><td class="right">${(item.price * item.qty).toFixed(2)}</td></tr>`;
+            }
+            
+            html += `
+                </table>
+                <div class="line"></div>
+                <table>
+                    <tr><td class="bold" style="font-size:15px;">TOTAL</td><td class="bold right" style="font-size:15px;">Rs. ${parseFloat(grandTotal).toFixed(2)}</td></tr>
+                </table>
+                <div class="line"></div>
+                <div class="center bold">THANK YOU! VISIT AGAIN</div>
+                <div class="center" style="font-size: 10px; margin-top:10px;">* Goods once sold cannot be returned</div>
+                </body></html>
+            `;
+            doc.write(html);
+            doc.close();
+
+            // Wait a tiny bit for render, then Print
+            setTimeout(() => {
+                printFrame.contentWindow.focus();
+                printFrame.contentWindow.print();
+                
+                // 🌟 THE FIX: Reset UI dynamically instead of reloading the page 🌟
+                const btn = document.getElementById('checkoutBtn');
+                btn.innerHTML = '<i class="fas fa-print mr-2 text-xl"></i> GENERATE BILL (F9)';
+                
+                const searchInput = document.getElementById('searchInput');
+                searchInput.value = ''; // Search பாக்ஸை கிளியர் பண்றோம்
+                searchInput.focus(); // கர்சரை மறுபடியும் Search பாக்ஸ்ல வைக்கிறோம்
+                filterProducts(); // ப்ராடக்ட் லிஸ்ட்டை ரீசெட் பண்றோம்
+                
+            }, 300);
+        }
+
+        // CHECKOUT (AJAX POST)
+        function processCheckout() {
+            if (Object.keys(cart).length === 0) return;
+
+            const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const btn = document.getElementById('checkoutBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generating Bill...';
+            btn.disabled = true;
+
+            // Calculate current total
+            let currentTotal = 0;
+            for(let id in cart) { currentTotal += cart[id].price * cart[id].qty; }
+
+            // Store current cart temporarily for printing since we clear it soon
+            const cartForPrint = JSON.parse(JSON.stringify(cart));
+
+            fetch('{% url "pos_terminal" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf
+                },
+                body: JSON.stringify({ cart: cart })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Start Thermal Print Sequence & Clear Cart! 🖨️
+                    clearCart();
+                    
+                    const invoice = data.invoice_number || 'INV-' + Math.floor(Math.random() * 100000);
+                    printThermalReceipt(cartForPrint, currentTotal, invoice);
+                    
+                } else {
+                    alert(data.message); 
+                    btn.innerHTML = '<i class="fas fa-print mr-2 text-xl"></i> GENERATE BILL (F9)';
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Server Error! Check console.');
+                btn.innerHTML = '<i class="fas fa-print mr-2 text-xl"></i> GENERATE BILL (F9)';
+                btn.disabled = false;
+            });
+        }
+
+        // SEARCH & FILTER
+        function filterProducts() {
+            let input = document.getElementById('searchInput').value.toLowerCase();
+            let catFilter = document.getElementById('categoryFilter').value;
+            let cards = document.getElementsByClassName('product-card');
+
+            for (let i = 0; i < cards.length; i++) {
+                let name = cards[i].getAttribute('data-name');
+                let cat = cards[i].getAttribute('data-category');
+                
+                let matchesSearch = name.includes(input);
+                let matchesCat = (catFilter === 'ALL' || cat === catFilter);
+
+                if (matchesSearch && matchesCat) {
+                    cards[i].style.display = "flex";
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+        }
+    </script>
+</body>
+</html>

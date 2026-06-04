@@ -1,0 +1,83 @@
+<main class="flex-1 flex flex-col h-full min-w-0 z-10 relative overflow-hidden">
+    <div id="app-content" class="flex-1 overflow-y-auto p-8 relative">
+        <div class="max-w-5xl mx-auto w-full">
+            
+            <div class="mb-8">
+                <h2 class="text-3xl font-black text-gray-800 tracking-tight">Administration Settings</h2>
+                <p class="text-gray-500 mt-1 text-sm">Perform system maintenance, handle database backups, and check logs.</p>
+            </div>
+
+            {% if success_msg %}
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-r-lg shadow-sm font-bold flex items-center">
+                <i class="fas fa-info-circle text-xl mr-3"></i> {{ success_msg }}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <div class="col-span-1 md:col-span-2 space-y-6">
+                    
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-blue-500 bg-white/90 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-database text-blue-500 mr-2"></i> Database Backup & Recovery
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-6">Download a complete snapshot of your supermarket data (products, stock, users, and sales).</p>
+                        
+                        <form hx-post="{% url 'settings' %}" hx-target="#app-content" hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="backup">
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3 rounded-xl text-sm transition shadow-md flex items-center gap-2">
+                                <i class="fas fa-download"></i> Backup Database Now
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-amber-500 bg-white/90 shadow-sm">
+                        <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-tools text-amber-500 mr-2"></i> System Maintenance
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-6">Clear temporary transaction logs, rebuild table indexes, and refresh HTMX cache fragments to optimize application speed.</p>
+                        
+                        <form hx-post="{% url 'settings' %}" hx-target="#app-content" hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="maintenance">
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-5 py-3 rounded-xl text-sm transition shadow-md flex items-center gap-2">
+                                <i class="fas fa-broom"></i> Optimize & Clear Cache
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+
+                <div class="col-span-1">
+                    <div class="glass-panel rounded-2xl p-6 border-t-4 border-t-gray-700 bg-white/90 shadow-sm space-y-6 h-full">
+                        <h3 class="text-lg font-bold text-gray-800 border-b pb-2">System Diagnostics</h3>
+                        
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Application Version</p>
+                            <p class="text-sm font-black text-gray-700 mt-0.5">{{ app_version }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Database Engine</p>
+                            <p class="text-sm font-bold text-indigo-600 mt-0.5"><i class="fas fa-server mr-1"></i> {{ database_type }}</p>
+                        </div>
+
+                        <div>
+                            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Server Status</p>
+                            <p class="text-sm font-bold text-green-600 mt-0.5 flex items-center gap-1.5">
+                                <span class="w-2.5 h-2.5 bg-green-500 rounded-full inline-block animate-pulse"></span> {{ system_status }}
+                            </p>
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-100 text-[11px] text-gray-400 font-semibold">
+                            <i class="fas fa-shield-alt text-gray-400 mr-1"></i> Securing Supermarket Terminal Connections via Django WSGI layer.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</main>
