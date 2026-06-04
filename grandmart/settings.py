@@ -26,7 +26,10 @@ SECRET_KEY = 'django-insecure-%(d)fp7()lrw82fj&61htncgfv9%in8!q8xm+w*l+umf!vr6#g
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'grandmart.onrender.com',  
+    'localhost',
+]
 
 
 # Application definition
