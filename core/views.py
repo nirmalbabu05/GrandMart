@@ -1,3 +1,6 @@
+import urllib.request
+import urllib.parse
+import re
 import json
 import csv
 from datetime import timedelta
@@ -22,14 +25,14 @@ User = get_user_model()
 # ==========================================
 def admin_only(view_func):
     """
-    Ithu Admin-a mattum ulla vidum. Cashier click panna, POS Terminal-kku redirect aagiduvaanga.
+    Ithu Admin-a mattum ulla vidum. Cashier click panna, Dashboard-kku redirect aagiduvaanga.
     """
     @wraps(view_func)
     def wrapper_func(request, *args, **kwargs):
         if request.user.is_superuser:
             return view_func(request, *args, **kwargs)
         else:
-            return redirect('pos_terminal')
+            return redirect('erp_dashboard')
     return wrapper_func
 
 
@@ -38,10 +41,7 @@ def admin_only(view_func):
 # ==========================================
 def user_login(request):
     if request.user.is_authenticated:
-        if request.user.is_superuser:
-            return redirect('erp_dashboard')
-        else:
-            return redirect('pos_terminal')
+        return redirect('erp_dashboard') 
         
     error_msg = None
     if request.method == 'POST':
@@ -52,10 +52,7 @@ def user_login(request):
         
         if user is not None:
             login(request, user)
-            if user.is_superuser:
-                return redirect('erp_dashboard')
-            else:
-                return redirect('pos_terminal')
+            return redirect('erp_dashboard') 
         else:
             error_msg = "Invalid Username or Password!"
             
@@ -70,8 +67,10 @@ def user_logout(request):
 # 🏪 ERP MODULES (Admin Only Modules)
 # ==========================================
 @login_required(login_url='login')
-@admin_only
 def erp_dashboard(request):
+    if not request.user.is_superuser:
+        return render(request, 'erp/dashboard.html', {'is_cashier': True})
+
     today = timezone.now().date()
     
     total_products = Product.objects.filter(is_active=True).count()
@@ -157,7 +156,7 @@ def store_master(request):
             category_id = request.POST.get('category')
             barcode = request.POST.get('barcode')
             image = request.FILES.get('image')
-            image_url = request.POST.get('image_url') # ADDED
+            image_url = request.POST.get('image_url') 
             
             if not barcode or barcode.strip() == "":
                 barcode = None
@@ -178,8 +177,8 @@ def store_master(request):
                 pack_size=pack_size,
                 mrp_price=mrp_price,
                 selling_price=selling_price,
-                image=image, # ADDED
-                image_url=image_url # ADDED
+                image=image, 
+                image_url=image_url 
             )
         except Exception as e:
             print(f"Error saving product: {e}") 
@@ -189,7 +188,6 @@ def store_master(request):
         'categories': Category.objects.all(), 
         'units': Unit.objects.all()
     })
-
 
 @login_required(login_url='login')
 @admin_only
@@ -213,7 +211,6 @@ def received_goods(request):
             bulk_text = request.POST.get('bulk_data', '').strip()
             
             with transaction.atomic():
-                # 1. Excel Smart Paste Logic
                 if bulk_text:
                     lines = bulk_text.split('\n')
                     for line in lines:
@@ -258,7 +255,6 @@ def received_goods(request):
                                 product.stock_quantity += qty
                                 product.save()
                 
-                # 2. Manual Grid Logic
                 else:
                     product_ids = request.POST.getlist('product[]')
                     batch_numbers = request.POST.getlist('batch_number[]')
@@ -301,7 +297,6 @@ def received_goods(request):
         except Exception as e:
             print(f"Error processing received goods: {e}") 
 
-    # THE FIX: Split products into Out of Stock and In Stock
     out_of_stock = Product.objects.filter(is_active=True, stock_quantity__lte=0).order_by('name')
     in_stock = Product.objects.filter(is_active=True, stock_quantity__gt=0).order_by('name')
 
@@ -316,7 +311,7 @@ def received_goods(request):
 @login_required(login_url='login')
 def stock_balance(request):
     if not request.headers.get('HX-Request') and request.method == 'GET':
-        return redirect('erp_dashboard') if request.user.is_superuser else redirect('pos_terminal')
+        return redirect('erp_dashboard') 
         
     batches = ProductBatch.objects.select_related('product').filter(quantity_available__gt=0).order_by('product__name')
     
@@ -350,20 +345,13 @@ def transfer_goods(request):
 @login_required(login_url='login')
 def pos_terminal(request):
     if not request.headers.get('HX-Request') and request.method == 'GET': 
-        if request.user.is_superuser:
-            return redirect('erp_dashboard')
-        else:
-            return render(request, 'erp/pos_terminal.html', {
-                'products': Product.objects.filter(is_active=True), 
-                'categories': Category.objects.all()
-            })
+        return redirect('erp_dashboard') 
             
     if request.method == 'POST':
         data = json.loads(request.body)
         cart = data.get('cart', {})
         
         with transaction.atomic():
-            # 1. SECURITY CHECK: Validate stock before creating the bill
             for product_id, item in cart.items():
                 product = Product.objects.get(id=product_id)
                 if product.stock_quantity < item['qty']:
@@ -372,7 +360,6 @@ def pos_terminal(request):
                         'message': f"Out of Stock Error: '{product.name}' only has {product.stock_quantity} items left!"
                     })
 
-            # 2. Proceed to Billing if stock is available
             total_amount = sum(item['price'] * item['qty'] for item in cart.values())
             order = Order.objects.create(grand_total=total_amount, cashier=request.user, invoice_number=f"TMP-{timezone.now().timestamp()}")
             order.invoice_number = f"INV-{order.id:06d}"
@@ -381,12 +368,10 @@ def pos_terminal(request):
             for product_id, item in cart.items():
                 qty_to_deduct = item['qty']
                 
-                # Update main product stock
                 product = Product.objects.get(id=product_id)
                 product.stock_quantity -= qty_to_deduct
                 product.save()
                 
-                # Update Batch logic (FIFO deduction)
                 batches = ProductBatch.objects.filter(product_id=product_id, quantity_available__gt=0).order_by('id')
                 for batch in batches:
                     if qty_to_deduct <= 0:
@@ -411,7 +396,7 @@ def pos_terminal(request):
 @login_required(login_url='login')
 def sales_bills(request):
     if not request.headers.get('HX-Request') and request.method == 'GET':
-        return redirect('pos_terminal')
+        return redirect('erp_dashboard') 
         
     return render(request, 'erp/sales_bills.html', {
         'orders': Order.objects.all().order_by('-created_at')
@@ -420,7 +405,7 @@ def sales_bills(request):
 @login_required(login_url='login')
 def sales_return(request):
     if not request.headers.get('HX-Request') and request.method == 'GET':
-        return redirect('erp_dashboard') if request.user.is_superuser else redirect('pos_terminal')
+        return redirect('erp_dashboard') 
         
     success_msg = None
     error_msg = None
@@ -709,7 +694,6 @@ def edit_product(request, id):
         
         product.pack_size = request.POST.get('pack_size', '1 Pc') 
         
-        # 🌟 IMAGE & URL LOGIC ADDED HERE 🌟
         if request.FILES.get('image'):
             product.image = request.FILES.get('image')
         if request.POST.get('image_url'):
@@ -760,8 +744,8 @@ def global_search(request):
         'query': query
     })
 
-# --- SMART BULK PASTE (Fixed Clone Bug) ---
 @login_required(login_url='login')
+@admin_only
 def smart_bulk_paste(request):
     if request.method == 'POST':
         bulk_text = request.POST.get('bulk_data', '')
@@ -814,7 +798,6 @@ def store_home(request):
     categories = Category.objects.filter(is_active=True)
     products = Product.objects.filter(is_active=True).order_by('-id')
     
-    # Category Filter Logic
     cat_id = request.GET.get('category')
     search_query = request.GET.get('search')
     
@@ -831,7 +814,6 @@ def store_home(request):
         'search_query': search_query
     })
 
-# --- E-COMMERCE CHECKOUT ---
 @transaction.atomic
 def checkout(request):
     if request.method == 'POST':
@@ -844,21 +826,19 @@ def checkout(request):
             
         total_amount = sum(item['price'] * item['qty'] for item in cart.values())
         
-        # 1. Create Web Order
         order = Order.objects.create(
             order_type='WEB',
             customer_name=customer.get('name', 'Web Customer'),
             customer_phone=customer.get('phone', ''),
             shipping_address=customer.get('address', ''),
             payment_method=customer.get('payment_method', 'COD'),
-            status='Pending', # New web orders are pending
+            status='Pending',
             grand_total=total_amount,
             invoice_number=f"WEB-{timezone.now().timestamp()}"
         )
         order.invoice_number = f"WEB-{order.id:06d}"
         order.save()
         
-        # 2. Deduct Live Stock & Batches
         for p_id, item in cart.items():
             qty_to_deduct = item['qty']
             product = Product.objects.get(id=p_id)
@@ -894,10 +874,9 @@ def checkout(request):
 # 📦 WEB ORDER MANAGEMENT (ERP SIDE)
 # ==========================================
 @login_required(login_url='login')
-@admin_only
 def web_orders(request):
     if not request.headers.get('HX-Request') and request.method == 'GET':
-        pass # Add logic if needed, but normally allow GET
+        return redirect('erp_dashboard')
         
     if request.method == 'POST':
         order_id = request.POST.get('order_id')
@@ -907,14 +886,11 @@ def web_orders(request):
             order = get_object_or_404(Order, id=order_id)
             order.status = new_status
             order.save()
-            # In a real app, you might send an SMS/Email to customer here
             
         return redirect('web_orders')
 
-    # Fetch only WEB orders, newest first
     orders = Order.objects.filter(order_type='WEB').order_by('-created_at')
     
-    # Calculate some quick stats for the top cards
     pending_count = orders.filter(status='Pending').count()
     packing_count = orders.filter(status='Packing').count()
     delivery_count = orders.filter(status='Out for Delivery').count()
@@ -930,7 +906,7 @@ def web_orders(request):
 # 🖨️ INVOICE & BILL PRINTING
 # ==========================================
 @login_required(login_url='login')
-@xframe_options_sameorigin  # 🌟 இத புதுசா ஆட் பண்ணுங்க 🌟
+@xframe_options_sameorigin
 def print_invoice(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     items = OrderItem.objects.filter(order=order)
@@ -941,3 +917,63 @@ def print_invoice(request, order_id):
         'items': items,
         'store': store
     })
+
+import urllib.request
+import urllib.parse
+import json
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+
+# ==========================================
+# 🪄 AUTO IMAGE FETCHER (100% LEGAL API MODE)
+# ==========================================
+@login_required(login_url='login')
+def fetch_product_image(request):
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'status': 'error', 'message': 'Product name empty!'})
+
+    # API-ல் தேட வசதியாக, அடைப்புக்குறிக்குள் () இருக்கும் அளவுகளை நீக்குகிறோம்
+    # உ-ம்: "Matchbox Bundle (10s)" -> "Matchbox Bundle" என மாறும்
+    clean_query = query.split('(')[0].strip()
+
+    headers = {
+        'User-Agent': 'GrandMartERP/1.0 (Student Project)'
+    }
+
+    # 🚀 ENGINE 1: Open Food Facts API (Groceries & Branded Items)
+    try:
+        off_url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={urllib.parse.quote(clean_query)}&search_simple=1&action=process&json=1"
+        req1 = urllib.request.Request(off_url, headers=headers)
+        
+        # Timeout செட் செய்துள்ளோம், சர்வர் Hang ஆகாது
+        response1 = urllib.request.urlopen(req1, timeout=5).read().decode('utf-8')
+        data1 = json.loads(response1)
+        
+        if data1.get('products'):
+            for prod in data1['products']:
+                if 'image_front_url' in prod:
+                    return JsonResponse({'status': 'success', 'image_url': prod['image_front_url']})
+    except Exception as e:
+        print(f"OFF API Error: {e}")
+
+    # 🚀 ENGINE 2: Wikipedia API (Generic Items like Matchbox, Tape, Paper)
+    try:
+        # விக்கிபீடியாவில் முதல் வார்த்தையை வைத்து தேடினால் துல்லியம் அதிகம்
+        wiki_query = clean_query.split()[0] if clean_query else clean_query
+        
+        wiki_url = f"https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch={urllib.parse.quote(wiki_query)}&prop=pageimages&pithumbsize=500&format=json"
+        req2 = urllib.request.Request(wiki_url, headers=headers)
+        response2 = urllib.request.urlopen(req2, timeout=5).read().decode('utf-8')
+        data2 = json.loads(response2)
+
+        if 'query' in data2 and 'pages' in data2['query']:
+            pages = data2['query']['pages']
+            for page_id in pages:
+                if 'thumbnail' in pages[page_id]:
+                    return JsonResponse({'status': 'success', 'image_url': pages[page_id]['thumbnail']['source']})
+    except Exception as e:
+        print(f"Wiki API Error: {e}")
+
+    # இரண்டு API-யிலும் கிடைக்கவில்லை என்றால் எரர் அனுப்பும்
+    return JsonResponse({'status': 'error', 'message': 'Image not found in public databases.'})
