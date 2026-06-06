@@ -2,15 +2,6 @@ from django.urls import path
 from . import views
 import csv
 from django.http import HttpResponse, JsonResponse
-from django.contrib.auth import get_user_model # இத மேல இம்போர்ட் பண்ணுங்க
-from django.http import HttpResponse
-
-def create_my_admin(request):
-    User = get_user_model() # இதுதான் இப்போ உங்க core.User-ஐ எடுக்கும்
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-        return HttpResponse("Admin created! ID: admin, Pass: admin123")
-    return HttpResponse("Admin already exists!")
 
 urlpatterns = [
     # --- CUSTOMER STOREFRONT ---
@@ -67,5 +58,5 @@ urlpatterns = [
     # --- DELETE STAFF ACCOUNT ---
     path('erp/delete-user/<int:id>/', views.delete_user, name='delete_user'),
 
-    path('make-me-admin/', create_my_admin),
+    path('fetch-image/', views.fetch_product_image, name='fetch_image'),
 ]
