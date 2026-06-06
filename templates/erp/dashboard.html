@@ -87,6 +87,7 @@
                 <span class="tracking-wide">Dashboard</span>
             </a>
 
+            {% if request.user.is_superuser %}
             <p class="px-3 pt-2 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Master Configuration</p>
             
             <a hx-get="{% url 'store_master' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
@@ -100,6 +101,7 @@
             <a hx-get="{% url 'categories_units' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
                 <i class="fas fa-tags w-8 text-center text-pink-500"></i> <span>Categories & Units</span>
             </a>
+            {% endif %}
 
             <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Inventory Setup</p>
             
@@ -107,6 +109,7 @@
                 <i class="fas fa-boxes w-8 text-center text-emerald-500"></i> <span>Stock Balance</span>
             </a>
             
+            {% if request.user.is_superuser %}
             <a hx-get="{% url 'stock_take' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
                 <i class="fas fa-clipboard-check w-8 text-center text-teal-500"></i> <span>Stock Take</span>
             </a>
@@ -122,10 +125,11 @@
             <a hx-get="{% url 'delivery_schedule' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
                 <i class="fas fa-calendar-alt w-8 text-center text-blue-400"></i> <span>Delivery Schedule</span>
             </a>
+            {% endif %}
 
             <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Sales & Billing</p>
             
-            <a href="{% url 'web_orders' %}" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
+            <a hx-get="{% url 'web_orders' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
                 <div class="relative w-8 flex justify-center text-blue-500">
                     <i class="fas fa-globe"></i>
                     <span class="absolute top-0 right-0 -mt-1 -mr-1 flex h-2 w-2">
@@ -148,6 +152,7 @@
                 <i class="fas fa-undo-alt w-8 text-center text-red-400"></i> <span>Sales Return</span>
             </a>
 
+            {% if request.user.is_superuser %}
             <p class="px-3 pt-5 pb-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">Administration</p>
             
             <a hx-get="{% url 'user_management' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm cursor-pointer" onclick="closeSidebarOnMobile()">
@@ -161,6 +166,7 @@
             <a hx-get="{% url 'settings' %}" hx-target="#app-content" hx-swap="innerHTML" class="nav-link sidebar-item flex items-center p-2.5 text-gray-700 font-semibold rounded-lg text-sm mb-6 cursor-pointer" onclick="closeSidebarOnMobile()">
                 <i class="fas fa-sliders-h w-8 text-center text-gray-500"></i> <span>Settings</span>
             </a>
+            {% endif %}
         </nav>
         
         <div class="p-4 border-t border-gray-200/50 flex-shrink-0 bg-white/40">
@@ -184,7 +190,7 @@
 
     <main class="flex-1 flex flex-col h-full min-w-0 z-10 relative">
         
-        <header class="glass-panel shadow-sm flex items-center justify-between px-4 md:px-8 py-4 z-20 flex-shrink-0 bg-white/70">
+        <header class="glass-panel shadow-sm flex items-center justify-between px-4 md:px-8 py-4 z-[100] relative flex-shrink-0 bg-white/70">
             
             <div class="flex items-center w-full md:w-2/5 z-50">
                 <button id="mobile-menu-btn" class="md:hidden text-gray-500 hover:text-blue-600 focus:outline-none mr-4 transition-transform active:scale-95">
@@ -211,7 +217,7 @@
                     <i class="fas fa-plus-circle mr-1"></i> Quick POS
                 </button>
                 
-                <a href="{% url 'web_orders' %}" class="relative hidden md:flex bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-blue-200 items-center">
+                <a hx-get="{% url 'web_orders' %}" hx-target="#app-content" hx-swap="innerHTML" class="cursor-pointer relative hidden md:flex bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold transition shadow-sm border border-blue-200 items-center">
                     <i class="fas fa-globe mr-2"></i> Web Orders
                     <span class="absolute -top-1 -right-1 flex h-3 w-3">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -219,28 +225,49 @@
                     </span>
                 </a>
                 
+                <!-- 🌟 INTERACTIVE NOTIFICATION LOGIC 🌟 -->
                 <div class="relative">
-                    <button onclick="document.getElementById('noti-dropdown').classList.toggle('hidden')" class="text-gray-500 hover:text-blue-600 relative transition-transform hover:scale-110 focus:outline-none">
+                    <button onclick="toggleNotifications()" class="text-gray-500 hover:text-blue-600 relative transition-transform hover:scale-110 focus:outline-none">
                         <i class="fas fa-bell text-xl"></i>
-                        <span class="absolute -top-1 -right-1 bg-red-500 border-2 border-white text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">2</span>
+                        <span id="noti-badge" class="absolute -top-1 -right-1 bg-red-500 border-2 border-white text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">2</span>
                     </button>
                     <div id="noti-dropdown" class="hidden absolute right-0 mt-3 w-64 md:w-72 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-4">
                         <p class="font-bold text-gray-800 border-b border-gray-100 pb-2 mb-2">System Alerts</p>
-                        <div class="text-sm text-gray-600 space-y-3">
-                            <p class="flex items-start"><i class="fas fa-exclamation-triangle text-orange-500 mt-1 mr-2"></i> Low stock items found. Check inventory!</p>
-                            <p class="flex items-start"><i class="fas fa-truck text-blue-500 mt-1 mr-2"></i> 4 Supplier deliveries pending this week.</p>
+                        
+                        <div id="noti-list" class="text-sm text-gray-600 space-y-2">
+                            <!-- Click function added here -->
+                            <div class="flex justify-between items-start p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition group" onclick="removeNotification(this)">
+                                <p class="flex items-start"><i class="fas fa-exclamation-triangle text-orange-500 mt-1 mr-2"></i> Low stock items found.</p>
+                                <i class="fas fa-check-circle text-green-500 opacity-0 group-hover:opacity-100 ml-2 transition" title="Click to dismiss"></i>
+                            </div>
+                            <!-- Click function added here -->
+                            <div class="flex justify-between items-start p-2 hover:bg-gray-50 rounded-lg cursor-pointer transition group" onclick="removeNotification(this)">
+                                <p class="flex items-start"><i class="fas fa-truck text-blue-500 mt-1 mr-2"></i> 4 Supplier deliveries pending.</p>
+                                <i class="fas fa-check-circle text-green-500 opacity-0 group-hover:opacity-100 ml-2 transition" title="Click to dismiss"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Empty state message -->
+                        <div id="empty-noti" class="hidden text-center py-4">
+                            <i class="fas fa-check-circle text-green-400 text-2xl mb-2"></i>
+                            <p class="text-xs text-gray-500 font-bold tracking-wide">All caught up! 🎉</p>
                         </div>
                     </div>
                 </div>
 
+                <!-- 🌟 SETTINGS ICON - ADMIN ONLY 🌟 -->
+                {% if request.user.is_superuser %}
                 <button hx-get="{% url 'settings' %}" hx-target="#app-content" hx-swap="innerHTML" class="text-gray-500 hover:text-blue-600 transition-transform hover:rotate-90">
                     <i class="fas fa-cog text-xl"></i>
                 </button>
+                {% endif %}
             </div>
         </header>
 
         <div id="app-content" class="flex-1 overflow-y-auto p-4 md:p-8 relative">
             
+            <!-- ADMIN DASHBOARD CARDS -->
+            {% if request.user.is_superuser %}
             <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 space-y-4 md:space-y-0">
                 <div>
                     <h2 class="text-2xl md:text-3xl font-black text-gray-800 tracking-tight">Business Overview</h2>
@@ -371,6 +398,21 @@
                     </table>
                 </div>
             </div>
+            
+            {% else %}
+            <!-- CASHIER WELCOME SCREEN -->
+            <div class="flex flex-col items-center justify-center h-full text-center mt-20 md:mt-32">
+                <div class="w-24 h-24 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner mx-auto border-4 border-white">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-black text-gray-800 tracking-tight">Welcome, {{ request.user.username|title }}!</h2>
+                <p class="text-gray-500 mt-3 font-medium max-w-md mx-auto">Your billing shift has started. Select <b class="text-blue-600">POS Terminal</b> to begin processing customer orders.</p>
+                
+                <button hx-get="{% url 'pos_terminal' %}" hx-target="#app-content" hx-swap="innerHTML" class="mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg shadow-blue-500/30 font-bold transition-all transform hover:-translate-y-1 flex items-center mx-auto">
+                    <i class="fas fa-shopping-cart mr-3 text-xl"></i> Open POS Terminal
+                </button>
+            </div>
+            {% endif %}
 
         </div> 
     </main>
@@ -415,12 +457,40 @@
             }
         });
 
-        // --- HTMX Chart Swap Logic (🌟 100% SIZING BUG FIX 🌟) ---
+        // --- Interactive Notification Logic ---
+        function toggleNotifications() {
+            const drop = document.getElementById('noti-dropdown');
+            drop.classList.toggle('hidden');
+            
+            // Animation-ஐ நிறுத்திடலாம் (பார்த்தாச்சுனு அர்த்தம்)
+            const badge = document.getElementById('noti-badge');
+            if(badge) badge.classList.remove('animate-pulse');
+        }
+
+        function removeNotification(element) {
+            // க்ளிக் பண்ண மெசேஜ்-ஐ டெலீட் பண்றோம்
+            element.remove();
+            
+            // நோட்டிபிகேஷன் கவுண்ட் அப்டேட் பண்றோம்
+            const list = document.getElementById('noti-list');
+            const badge = document.getElementById('noti-badge');
+            const emptyMsg = document.getElementById('empty-noti');
+            
+            const count = list.children.length;
+            
+            if (count > 0) {
+                if(badge) badge.innerText = count;
+            } else {
+                if(badge) badge.classList.add('hidden'); // கவுண்ட் 0 ஆனா பெல் நம்பரை ஹைட் பண்ணிடு
+                emptyMsg.classList.remove('hidden');     // All Caught Up மெசேஜ் காட்டு
+            }
+        }
+
+        // --- HTMX Chart Swap Logic ---
         let dashboardChartInstance = null;
         
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             if (document.getElementById('revenueChart')) {
-                // DOM Layout முழுசா செட் ஆக ஒரு 50ms டைம் தர்றோம்
                 setTimeout(initDashboardChart, 50);
             }
         });
@@ -429,14 +499,12 @@
             const canvas = document.getElementById('revenueChart');
             if(!canvas) return;
 
-            // பழைய சார்ட் மெமரியில இருந்தா அதை கம்ப்ளீட்டா அழிச்சிடணும்
             if(dashboardChartInstance) {
                 dashboardChartInstance.destroy();
             }
             
             const ctx = canvas.getContext('2d');
             
-            // HTML-ல இருந்து லைவ் டேட்டாவை எடுக்குறோம்
             const rawLabels = canvas.getAttribute('data-labels');
             const rawValues = canvas.getAttribute('data-values');
             
@@ -459,7 +527,7 @@
                 },
                 options: { 
                     responsive: true, 
-                    maintainAspectRatio: false, // இது தான் கன்டெய்னர் சைஸ்க்கு ஏத்த மாதிரி அடாப்ட் பண்ணும்
+                    maintainAspectRatio: false, 
                     animation: { duration: 800 }
                 }
             });
@@ -467,7 +535,6 @@
         
         document.addEventListener("DOMContentLoaded", function() {
             if (document.getElementById('revenueChart')) {
-                // பேஜ் ஃபர்ஸ்ட் டைம் லோட் ஆகும்போது சின்ன delay
                 setTimeout(initDashboardChart, 50);
             }
         });
